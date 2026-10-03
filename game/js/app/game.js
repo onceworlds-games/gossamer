@@ -144,6 +144,10 @@ export class Game {
     r.on('rename', () => this.screens.refresh());
     r.on('ready', () => this.screens.refresh());
     r.on('close', (reason) => this.closed(reason));
+    r.on('match', () => {
+      // Let in at dusk: a watcher becomes a player without reloading.
+      if (this.screen === 'night' && this.run && !this.run.myId && r.match?.participants?.includes(this.me) && !r.spectating) this.enterNight();
+    });
     r.on('matchpause', () => (this.paused = true));
     r.on('matchresume', () => (this.paused = false));
     r.on('message', (data, from, at) => this.net.message(data, from, at));
@@ -557,9 +561,18 @@ export class Game {
   drawNight(run, dt) {
     const w = run.world;
     const touch = platform.controls.touch;
-    const pointer = this.input.aiming ?? (this.input.pointer.mouse && this.input.pointer.in ? this.input.pointer : null);
+    let pointer = this.input.aiming ?? (this.input.pointer.mouse && this.input.pointer.in ? this.input.pointer : null);
     const toWorld = (sx, sy) => this.renderer.cam.toWorld(sx, sy);
-    const aim = pointer ? run.aim(pointer.x, pointer.y, toWorld, !!this.input.aiming || touch) : null;
+    run.charge = this.input.charging ? this.input.charge : undefined;
+    // Charging a pounce or swinging the bolas on touch: aim along the stick (or at the last tap).
+    const me = run.me();
+    if (!pointer && me && (this.input.charging || this.input.spinning)) {
+      const st = platform.controls.stick;
+      const s = this.renderer.cam.toScreen(me.x, me.y);
+      if (Math.hypot(st.x, st.y) > 0.3) pointer = { x: s.x + st.x * 160, y: s.y + st.y * 160 };
+      else if (this.input.lastTap) pointer = this.input.lastTap;
+    }
+    const aim = pointer ? run.aim(pointer.x, pointer.y, toWorld, !!this.input.aiming || touch || this.input.charging) : null;
     const dawn = w.phase === 'dawn' ? Math.min(1, this.dawnT / 3) : 0;
     const hint = this.hints.current(run);
     this.renderer.draw({

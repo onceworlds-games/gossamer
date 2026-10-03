@@ -192,6 +192,22 @@ export function drawKnots(ctx, world, z) {
 export function drawAim(ctx, aim, z, t) {
   if (!aim) return;
   const w = 1.4 / z;
+  if (aim.kind === 'leap' && aim.arc) {
+    // The hunter's jump: the arc it will fly, dotted, brighter as the charge builds.
+    const { x0, y0, x1, y1 } = aim;
+    const d = Math.hypot(x1 - x0, y1 - y0);
+    const T = Math.max(0.22, Math.min(0.62, d / 470));
+    const vx = (x1 - x0) / T;
+    const vy = (y1 - y0 - 0.5 * 420 * T * T) / T;
+    ctx.fillStyle = aim.ok ? rgba(SILVER, 0.35 + 0.5 * (aim.power ?? 1)) : rgba(RUST, 0.8);
+    for (let i = 1; i <= 14; i++) {
+      const t = (T * i) / 14;
+      ctx.beginPath();
+      ctx.arc(x0 + vx * t, y0 + vy * t + 0.5 * 420 * t * t, (1.6 + (i === 14 ? 2 : 0)) / z, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    return;
+  }
   if (aim.kind === 'cast' || aim.kind === 'leap') {
     const ok = aim.ok;
     ctx.strokeStyle = ok ? rgba(SILVER, 0.75) : rgba(RUST, 0.85);

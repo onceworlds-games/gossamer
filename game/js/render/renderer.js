@@ -99,6 +99,7 @@ export class Renderer {
     for (const p of prey) if (p.st === 'fly' && cam.visible(p.x, p.y)) drawPrey(ctx, p, t, q);
     for (const w of world.wasps ?? []) if (cam.visible(w.x, w.y)) drawWasp(ctx, w, t);
     const me = v.spiders.find((s) => s.id === v.me);
+    if (me && me.sp === 'jumper') this.cones(ctx, me, prey, t);
     if (me && v.gauges) this.gauges(ctx, me, v.gauges, t);
     if (me && v.sense) this.sense(ctx, me, v.sense, t);
     for (const p of v.pings ?? []) this.ping(ctx, p, t);
@@ -164,6 +165,30 @@ export class Renderer {
       ctx.beginPath();
       ctx.arc(sp.x, sp.y, r + 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * g.progress);
       ctx.stroke();
+    }
+  }
+
+  /** What a resting insect can see: a pale wedge in front of it, warming as it grows uneasy. */
+  cones(ctx, me, prey, t) {
+    for (const p of prey) {
+      if (p.st !== 'land' || Math.hypot(p.x - me.x, p.y - me.y) > 300) continue;
+      const preen = p.preen > 0;
+      const half = preen ? 0.45 : 1.05;
+      const reach = preen ? 55 : 120;
+      const a0 = p.facing > 0 ? 0 : Math.PI;
+      const alarm = Math.min(1, p.alarm ?? 0);
+      ctx.fillStyle = alarm > 0.05 ? rgba(AMBER, 0.08 + alarm * 0.25) : rgba(SILVER, 0.06);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.arc(p.x, p.y, reach, a0 - half, a0 + half);
+      ctx.closePath();
+      ctx.fill();
+      if (alarm > 0.6) {
+        ctx.fillStyle = rgba(AMBER, 0.6 + 0.4 * Math.sin(t * 20));
+        ctx.font = `600 ${14 / this.cam.z}px serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('!', p.x, p.y - 14);
+      }
     }
   }
 

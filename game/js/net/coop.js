@@ -6,6 +6,7 @@ import { platform } from '../app/platform.js';
 import { packWorld, snapshot, applySnapshot, applyPose } from '../sim/codec.js';
 import { remapSplit, loseFooting } from '../sim/spider.js';
 import { addSpider } from '../sim/world.js';
+import { ensureRoster } from '../sim/season.js';
 
 const SEND_HZ = 10;
 const CK_EVERY = 2;
@@ -323,12 +324,19 @@ export class Coop {
     const watchers = (this.room.spectators ?? []).filter((p) => p.connected !== false && !p.idle);
     if (!watchers.length) return;
     const s = this.game.season();
+    if (!s) return;
+    let wrote = false;
     for (const p of watchers) {
       if (run.world.spiders.some((sp) => sp.id === p.id)) continue;
-      const r = s?.roster?.[p.id];
-      if (!r) continue;
+      // A friend who arrives at dusk gets a spider in the season and a place on the web.
+      if (!s.roster[p.id]) {
+        ensureRoster(s, p.id, 'orb');
+        wrote = true;
+      }
+      const r = s.roster[p.id];
       addSpider(run.world, { id: p.id, sp: r.sp, up: r.up, tr: r.tr });
     }
+    if (wrote) this.game.writeSeason(s);
     this.room.admit?.(watchers.map((p) => p.id));
   }
 }

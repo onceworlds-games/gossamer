@@ -370,9 +370,10 @@ export class NightRun {
     }
     if (me.sp === 'jumper' || me.sp === 'bolas') {
       const d = Math.hypot(p.x - me.x, p.y - me.y);
-      const reach = me.sp === 'jumper' ? me.mods.leap : SPECIES.bolas.fling * 1.2;
+      const power = this.charge ?? 1;
+      const reach = me.sp === 'jumper' ? me.mods.leap * Math.max(0.35, power) : SPECIES.bolas.fling * 1.2;
       const f = Math.min(1, reach / Math.max(1, d));
-      return { kind: 'leap', x0: me.x, y0: me.y, x1: me.x + (p.x - me.x) * f, y1: me.y + (p.y - me.y) * f, ok: d <= reach };
+      return { kind: 'leap', arc: me.sp === 'jumper', power, x0: me.x, y0: me.y, x1: me.x + (p.x - me.x) * f, y1: me.y + (p.y - me.y) * f, ok: d <= reach };
     }
     return null;
   }
