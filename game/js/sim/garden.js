@@ -186,6 +186,9 @@ function reed(b) {
   // Banks either side and the pond in the middle: falling in the water floats you to a bank.
   b.water = { y: GROUND - 60, x0: range(r, 300, 380), x1: range(r, 1200, 1300) };
   const g = ground(b, GROUND, 6);
+  // Over the pond the "ground" is the water's skin: lily pads and floating weed you can walk on.
+  for (const p of b.surfaces[g].pts) if (p[0] > b.water.x0 + 10 && p[0] < b.water.x1 - 10) p[1] = b.water.y + 4 + Math.sin(p[0] * 0.05) * 2;
+  for (let x = b.water.x0 + 30; x < b.water.x1 - 20; x += range(r, 40, 80)) b.decor.push({ k: 'pad', x, y: b.water.y + 4, s: range(r, 0.8, 1.3) });
   // Reeds and rushes rise out of the water: tall, thin, and they bend a lot in wind.
   const n = int(r, 9, 12);
   for (let i = 0; i < n; i++) {
@@ -366,9 +369,12 @@ function nodeKeys(g) {
         continue;
       }
       const [x, y] = s.pts[pi];
+      // A point right on top of the previous one adds nothing but a sliver of a branch: skip it.
+      const prev = row.length ? pos[row[row.length - 1]] : null;
+      if (prev && Math.hypot(prev[0] - x, prev[1] - y) < 6 && pi < s.pts.length - 1) continue;
       let k = -1;
       for (let j = 0; j < pos.length; j++) {
-        if (Math.abs(pos[j][0] - x) < 3 && Math.abs(pos[j][1] - y) < 3 && pos[j][2] !== si) {
+        if (Math.abs(pos[j][0] - x) < 5 && Math.abs(pos[j][1] - y) < 5 && pos[j][2] !== si) {
           k = j;
           break;
         }
@@ -452,23 +458,38 @@ export function lanePoint(lane, u, out = {}) {
   return out;
 }
 
-/** Ray from (x, y) along angle a: distance to the first branch it meets, or Infinity. */
-export function rayHit(g, x, y, a, maxD) {
+/**
+ * Where a spoke from (x, y) along angle a would anchor: crossings with branches up to maxD, stopping at the first
+ * sturdy one (casts snag there), choosing the one nearest the wanted radius. Returns its distance or Infinity.
+ */
+export function spokeHit(g, x, y, a, maxD, want) {
   const ex = x + Math.cos(a) * maxD;
   const ey = y + Math.sin(a) * maxD;
-  let best = Infinity;
+  const hits = [];
   for (const s of g.surfaces) {
+    const snag = SNAG.has(s.kind);
     for (let i = 1; i < s.pts.length; i++) {
       const u = crossing(s.pts[i - 1][0], s.pts[i - 1][1], s.pts[i][0], s.pts[i][1], x, y, ex, ey);
-      if (u >= 0) best = Math.min(best, u * maxD);
+      if (u >= 0 && u * maxD > 12) hits.push([u * maxD, snag]);
     }
+  }
+  hits.sort((p, q) => p[0] - q[0]);
+  let best = Infinity;
+  let score = Infinity;
+  for (const [d, snag] of hits) {
+    const sc = d < want * 0.45 ? 1000 + want - d : Math.abs(d - want);
+    if (sc < score) {
+      score = sc;
+      best = d;
+    }
+    if (snag) break;
   }
   return best;
 }
 
 /**
- * Good web sites: points near a lane where at least 6 of 8 rays reach a branch within 190 px (an orb fits and is held
- * all round). The bots and the validation use them; the forecast draws the best one.
+ * Good web sites: points near a lane where a spoke can reach an anchor all round (an orb fits and is held). The
+ * bots and the validation use them; the forecast talks about the best one.
  */
 export function findSites(g) {
   const sites = [];
@@ -478,33 +499,36 @@ export function findSites(g) {
     for (let u = 0.08; u < 0.95; u += 0.035) {
       lanePoint(lane, u, p);
       if (p.x < 40 || p.x > W - 40 || p.y < 60 || p.y > GROUND - 60) continue;
-      const hit = [];
+      const ok = [];
       const ds = [];
       for (let k = 0; k < RAYS; k++) {
-        const d = rayHit(g, p.x, p.y, (k / RAYS) * Math.PI * 2, 230);
-        hit.push(d >= 40 && d < 230);
-        if (d < 230) ds.push(d);
+        const d = spokeHit(g, p.x, p.y, (k / RAYS) * Math.PI * 2, 230, 105);
+        const good = d >= 45 && d < 230;
+        ok.push(good);
+        if (good) ds.push(d);
       }
-      const hits = hit.filter(Boolean).length;
+      const hits = ds.length;
       let maxGap = 0;
       for (let k = 0; k < RAYS; k++) {
         let gap = 0;
-        while (gap < RAYS && !hit[(k + gap) % RAYS]) gap++;
+        while (gap < RAYS && !ok[(k + gap) % RAYS]) gap++;
         maxGap = Math.max(maxGap, gap);
       }
-      const close = ds.filter((d) => d < 40).length;
-      if (hits >= 10 && maxGap <= 4 && close <= 2) {
+      if (hits >= 11 && maxGap <= 3) {
         ds.sort((a, b) => a - b);
-        const median = ds[Math.floor(ds.length / 2)] ?? 0;
-        sites.push({ x: p.x, y: p.y, lane: li, r: Math.min(150, median * 0.8), score: hits * 10 + lane.share * 60 + Math.min(median, 160) / 8 - close * 6 });
+        const median = ds[Math.floor(ds.length / 2)];
+        sites.push({ x: p.x, y: p.y, lane: li, r: Math.max(60, Math.min(140, median * 0.9)), score: hits * 10 + lane.share * 60 + Math.min(median, 140) / 6 });
       }
     }
   });
   sites.sort((a, b) => b.score - a.score);
-  // Keep sites that aren't on top of each other.
+  // Keep sites that aren't on top of each other: the best few on each lane.
   const out = [];
-  for (const s of sites) if (out.every((o) => Math.hypot(o.x - s.x, o.y - s.y) > 60)) out.push(s);
-  return out.slice(0, 8);
+  for (const s of sites) {
+    if (out.filter((o) => o.lane === s.lane).length >= 3) continue;
+    if (out.every((o) => Math.hypot(o.x - s.x, o.y - s.y) > 60)) out.push(s);
+  }
+  return out.sort((a, b) => b.score - a.score);
 }
 
 export function validate(g) {

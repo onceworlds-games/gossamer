@@ -3,12 +3,11 @@
 import { PREY, SPECIES, T_STICKY, T_FRAME, T_SURFACE, N_PREY, GROUND, W } from './data.js';
 import { makeRng, range, rand, chance, mix, hash } from './rng.js';
 import { route, standSlot } from './path.js';
-import { planOrb } from './quickorb.js';
-import { useTarget } from './actions.js';
+import { useTarget, fitOrb } from './actions.js';
 import { retreatNode } from './garden.js';
 
 export const SKILLS = {
-  novice: { react: 1.3, aim: 40, threat: 0.15, siteLuck: 0.5, repair: 0, prioritise: false, retreatHp: 0 },
+  novice: { react: 0.9, aim: 40, threat: 0.15, siteLuck: 0.8, repair: 0, prioritise: false, retreatHp: 0 },
   average: { react: 0.55, aim: 14, threat: 0.55, siteLuck: 0.85, repair: 0.6, prioritise: false, retreatHp: 25 },
   good: { react: 0.2, aim: 5, threat: 0.95, siteLuck: 1, repair: 1, prioritise: true, retreatHp: 35 },
 };
@@ -17,7 +16,7 @@ export function makeBot(world, id, skill = 'average') {
   return { id, skill: SKILLS[skill] ? skill : 'average', k: SKILLS[skill] ?? SKILLS.average, rng: makeRng(mix(world.seed, hash(id))), think: 0, path: null, pathTo: 0, goal: null, site: null, built: 0, holding: false, siteTries: 0, cool: 0, lastSilk: 0, wrenDodge: null };
 }
 
-const input = () => ({ mx: 0, my: 0, hurry: false, leap: null });
+const input = () => ({ mx: 0, my: 0, hurry: false, leap: null, noDrop: true });
 
 /** One tick: returns the input for this spider and may push commands into world.cmds. */
 export function botTick(world, bot, dt) {
@@ -32,6 +31,8 @@ export function botTick(world, bot, dt) {
   }
   if (bot.goal?.k === 'drop') {
     inp.my = 1;
+    inp.noDrop = false;
+    inp.drop = true;
     if (sp.mode === 'hang' && sp.y > bot.goal.y) bot.goal = null;
     return inp;
   }
@@ -50,7 +51,8 @@ export function botTick(world, bot, dt) {
 
 function steer(world, bot, sp, inp) {
   const web = world.web;
-  while (bot.path.length && sp.node === bot.path[0]) bot.path.shift();
+  // Passing through a knot counts as reaching it (walking carries on through knots in one tick).
+  while (bot.path.length && (sp.node === bot.path[0] || sp.from === bot.path[0])) bot.path.shift();
   const next = bot.path[0];
   if (!next) return;
   const p = web.pos(next);
@@ -78,7 +80,6 @@ function steer(world, bot, sp, inp) {
       }
     }
   }
-  if (inp.my > 0.75) inp.my = 0.74; // never ask for a dragline by accident
 }
 
 function goTo(world, bot, sp, slot) {
@@ -91,6 +92,8 @@ function goTo(world, bot, sp, slot) {
     return true;
   }
   bot.path = route(web, from, slot);
+  // Mid-thread, the route starts at the knot we're walking toward first.
+  if (bot.path && !sp.node) bot.path.unshift(web.nid[from]);
   bot.pathTo = web.nid[slot];
   return !!bot.path;
 }
@@ -129,12 +132,14 @@ function threats(world, bot, sp) {
 }
 
 // ---------------------------------------------------------------- the orb weaver
-function chooseSite(world, bot) {
-  const sites = world.garden.sites;
+function chooseSite(world, bot, not = null) {
+  const sites = world.garden.sites.filter((s) => s !== not);
   if (!sites.length) return null;
   if (!chance(bot.rng, bot.k.siteLuck)) {
-    // A poor choice: anywhere at all, off the lanes.
-    return { x: range(bot.rng, 200, W - 200), y: range(bot.rng, 250, GROUND - 200), r: 90, bad: true };
+    // A poor choice: somewhere it can hang, but not where the prey fly.
+    const off = sites.filter((s) => s.lane !== 0);
+    const pickFrom = off.length ? off : sites;
+    return { ...pickFrom[Math.floor(rand(bot.rng) * pickFrom.length)], bad: true };
   }
   const main = sites.filter((s) => s.lane === 0);
   const pool = bot.skill === 'good' && main.length ? main.slice(0, 1) : (main.length ? main : sites).slice(0, 3);
@@ -154,6 +159,13 @@ function webNear(world, x, y, r) {
 
 function orbBot(world, bot, sp) {
   const web = world.web;
+  // The web we asked for was refused: forget it and look elsewhere.
+  if (bot.asked !== undefined && world.t - bot.asked < 1 && world.out.concat(world.ev).some((e) => e.k === 'refuse' && e.id === sp.id && e.why !== 'busy')) {
+    bot.built = 0;
+    bot.asked = undefined;
+    bot.site = chooseSite(world, bot, bot.site);
+    return;
+  }
   // 1. Food first: stuck prey on our web, then cocoons.
   const food = pickFood(world, bot, sp);
   if (food) {
@@ -181,24 +193,21 @@ function orbBot(world, bot, sp) {
   const have = webNear(world, site.x, site.y, (site.r ?? 90) + 20);
   const wantRepair = bot.built > 0 && have < bot.built * 0.4 && chance(bot.rng, bot.k.repair);
   if ((bot.built === 0 || wantRepair) && bot.cool <= 0) {
-    const plan = planOrb(web, site.x, site.y, site.r ?? 95, 'orb', sp.mods.range);
     const dist = Math.hypot(site.x - sp.x, site.y - sp.y);
-    if (!plan.ok) {
-      // Not enough to hang it from: throw a frame line across the site first.
-      if (++bot.siteTries > 4) {
-        bot.site = chooseSite(world, bot);
-        bot.siteTries = 0;
-        return;
-      }
-      if (dist < sp.mods.range - 40 && sp.silk > 20) frameAcross(world, bot, sp, site);
-      else approach(world, bot, sp, site);
-      bot.cool = 0.8;
+    if (dist > sp.mods.range - 30) return approach(world, bot, sp, site);
+    const plan = fitOrb(web, site.x, site.y, site.r ?? 95, 'orb', sp.mods.range, sp.silk);
+    if (!plan.ok && plan.why !== 'silk') {
+      // Nothing to hang it from here: try another place.
+      bot.site = chooseSite(world, bot, site);
+      bot.cool = 0.5;
       return;
     }
-    if (dist > sp.mods.range - 30) return approach(world, bot, sp, site);
-    if (sp.silk < plan.cost * (bot.skill === 'novice' ? 0.6 : 0.95)) return;
-    world.cmds.push({ id: sp.id, t: 'orb', x: site.x + range(bot.rng, -1, 1) * bot.k.aim * 0.3, y: site.y, r: site.r ?? 95, p: 'orb' });
+    // Wait for silk unless a decent web fits already (a novice doesn't wait).
+    const full = sp.silk >= sp.mods.maxSilk * 0.95;
+    if (!plan.ok || ((plan.r ?? 0) < (site.r ?? 95) * 0.8 && !full && bot.skill !== 'novice')) return;
+    world.cmds.push({ id: sp.id, t: 'orb', x: plan.hub.x, y: plan.hub.y, r: plan.r ?? site.r, p: 'orb' });
     bot.built = Math.max(10, plan.rings);
+    bot.asked = world.t;
     bot.cool = 3;
     return;
   }
@@ -213,13 +222,6 @@ function approach(world, bot, sp, site) {
   const web = world.web;
   const n = web.nearestNode(site.x, site.y, 400, (s) => web.adj[s].length > 0 && web.kind[s] !== N_PREY);
   if (n && bot.pathTo !== n.id) goTo(world, bot, sp, n.s);
-}
-
-function frameAcross(world, bot, sp, site) {
-  const web = world.web;
-  // Anchor points on opposite sides of the site: cast from where we are to the far one.
-  const far = web.nearestThread(site.x * 2 - sp.x, site.y * 2 - sp.y, 160, (s) => web.type[s] === T_SURFACE);
-  if (far) world.cmds.push({ id: sp.id, t: 'cast', type: T_FRAME, x: far.x, y: far.y });
 }
 
 function pickFood(world, bot, sp) {

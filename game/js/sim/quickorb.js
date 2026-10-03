@@ -32,11 +32,14 @@ function rayAngles(p, tall) {
   return out;
 }
 
-/** First thread (silk or branch) a ray from (x, y) meets within maxD: { s, t, d } or null. */
-function rayFirst(web, x, y, a, maxD) {
+/**
+ * Where a spoke from (x, y) along angle a should end: every thread the ray crosses up to maxD, stopping at the first
+ * sturdy branch (a cast snags there); among those, the one nearest the wanted radius r (silk counts too).
+ */
+function spokeEnd(web, x, y, a, maxD, r) {
   const ex = x + Math.cos(a) * maxD;
   const ey = y + Math.sin(a) * maxD;
-  let best = null;
+  const hits = [];
   for (let s = 0; s < web.threadHigh; s++) {
     if (web.tid[s] < 0) continue;
     const ta = web.ta[s];
@@ -46,7 +49,18 @@ function rayFirst(web, x, y, a, maxD) {
     if (u < 0) continue;
     const v = crossing(web.x[ta], web.y[ta], web.x[tb], web.y[tb], x, y, ex, ey);
     const d = v * maxD;
-    if (d > 10 && (!best || d < best.d)) best = { s, t: u, d };
+    if (d > 12) hits.push({ s, t: u, d, snag: web.type[s] === T_SURFACE && (web.flag[s] & 1) });
+  }
+  hits.sort((p, q) => p.d - q.d);
+  let best = null;
+  let bestScore = Infinity;
+  for (const h of hits) {
+    const score = h.d < r * 0.45 ? 1000 + (r - h.d) : Math.abs(h.d - r);
+    if (score < bestScore) {
+      bestScore = score;
+      best = h;
+    }
+    if (h.snag) break;
   }
   return best;
 }
@@ -63,7 +77,7 @@ export function planOrb(web, hx, hy, r, pattern = 'orb', range = 520) {
   let miss = 0;
   let worstGap = 0;
   for (const a of angles) {
-    const hit = rayFirst(web, hx, hy, a, maxD);
+    const hit = spokeEnd(web, hx, hy, a, maxD, r);
     if (!hit) {
       ends.push(null);
       worstGap = Math.max(worstGap, ++miss);
@@ -90,7 +104,7 @@ export function planOrb(web, hx, hy, r, pattern = 'orb', range = 520) {
 /** The spoke length the spiral is sized to: a low median, so one short spoke doesn't shrink the whole web. */
 function typicalSpoke(found) {
   const ds = found.map((e) => e.d).sort((a, b) => a - b);
-  return ds[Math.floor(ds.length * 0.35)] ?? 60;
+  return ds[Math.floor(ds.length * 0.6)] ?? 60;
 }
 
 /** Spiral segment estimates: one entry per sticky segment with its length. */

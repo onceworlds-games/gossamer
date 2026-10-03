@@ -261,15 +261,43 @@ function noteStructure(world, sp, from, to, type) {
 }
 
 // ---------------------------------------------------------------- Quick Orb
+/** The plan for an orb, shrunk until the silk on hand can spin it (a smaller whole web beats a big half one). */
+const NUDGE = [[0, 0], [12, 0], [-12, 0], [0, 12], [0, -12], [10, 10], [-10, 10], [10, -10], [-10, -10], [24, 0], [-24, 0], [0, 24], [0, -24]];
+
+/** A plan at (hx, hy), or at a spot a few px away if that's what lets it close all round. */
+function nudgedOrb(web, hx, hy, r, pattern, range) {
+  let first = null;
+  for (const [dx, dy] of NUDGE) {
+    const plan = planOrb(web, hx + dx, hy + dy, r, pattern, range);
+    if (plan.ok) return plan;
+    first ??= plan;
+  }
+  return first;
+}
+
+export function fitOrb(web, hx, hy, r, pattern, range, silk) {
+  let size = Number.isFinite(r) ? r : 95;
+  let plan = nudgedOrb(web, hx, hy, size, pattern, range);
+  if (!plan.ok) return plan;
+  while (plan.cost > silk && size > 52) {
+    size *= 0.86;
+    const smaller = nudgedOrb(web, plan.hub.x, plan.hub.y, size, pattern, range);
+    if (!smaller.ok) break;
+    plan = smaller;
+  }
+  if (plan.cost > silk * 1.15) return { ...plan, ok: false, why: 'silk' };
+  plan.r = size;
+  return plan;
+}
+
 export function startOrb(world, sp, hx, hy, r, pattern) {
   if (sp.sp !== 'orb') return refuse(world, sp, 'species');
   if (sp.mode !== 'walk' || sp.busy > 0 || sp.act) return refuse(world, sp, 'busy');
   if (!patternsFor(sp.mods.templates).includes(pattern)) pattern = 'orb';
   if (!Number.isFinite(hx) || !Number.isFinite(hy)) return false;
   if (Math.hypot(hx - sp.x, hy - sp.y) > sp.mods.range) return refuse(world, sp, 'far');
-  const plan = planOrb(world.web, hx, hy, r, pattern, sp.mods.range);
-  if (!plan.ok) return refuse(world, sp, 'open');
-  if (sp.silk < plan.cost * 0.35) return refuse(world, sp, 'silk');
+  const plan = fitOrb(world.web, hx, hy, r, pattern, sp.mods.range, sp.silk);
+  if (!plan.ok) return refuse(world, sp, plan.why === 'silk' ? 'silk' : 'open');
   if (world.web.playerNodes + 60 > PLAYER_NODES || world.web.playerThreads + 70 > PLAYER_THREADS) return refuse(world, sp, 'full');
   sp.act = { k: 'orb', plan, steps: orbSteps(plan), i: 0, timer: 0.1, hub: 0, spokes: {}, at: null };
   world.ev.push({ k: 'orbstart', id: sp.id, x: hx, y: hy, pattern });
@@ -415,7 +443,7 @@ export function use(world, sp, on) {
   if (!t) return refuse(world, sp, 'nothing');
   if (t.k === 'eat') {
     const p = t.prey;
-    const time = PREY[p.sp].eat * sp.mods.eat * (sp.sp === 'jumper' ? 0.8 : 1);
+    const time = PREY[p.sp].eat * sp.mods.eat;
     if (p.st === 'stuck') p.st = 'subdued';
     p.heldBy = sp.id;
     sp.act = { k: 'eat', prey: p.id, t: p.eaten ?? 0, T: time };

@@ -118,6 +118,14 @@ export function updateWasps(world, dt) {
       if (Math.hypot(sp.x - w.x, sp.y - w.y) < 15 && sp.invuln <= 0) {
         hurt(world, sp, WASP.sting, 'wasp');
         world.ev.push({ k: 'sting', id: sp.id, x: sp.x, y: sp.y });
+        // The sting knocks it off its thread (it hangs on its dragline, if it has silk for one).
+        if (alive(sp) && sp.mode === 'walk' && sp.sp !== 'jumper') {
+          const from = sp.node || sp.from;
+          sp.node = 0;
+          sp.th = 0;
+          startFall(world, sp, from ? { node: from } : null);
+          world.ev.push({ k: 'knock', id: sp.id, vx: 0, vy: 0 });
+        }
         w.st = 'patrol';
         w.cool = 3;
         w.vx = -w.vx;
@@ -134,7 +142,7 @@ export function updateWasps(world, dt) {
       continue;
     }
     // Patrol, and take any cocoon passed close by.
-    const loot = world.prey.find((p) => (p.st === 'cocoon' || p.st === 'subdued') && Math.hypot(p.x - w.x, p.y - w.y) < 90 && !p.heldBy);
+    const loot = world.prey.find((p) => (p.st === 'cocoon' || p.st === 'subdued' || p.st === 'stuck') && Math.hypot(p.x - w.x, p.y - w.y) < 110 && !p.heldBy);
     if (loot && !w.carry && w.t < w.life) {
       steer(w, loot.x, loot.y, WASP.speed * slow, dt);
       if (Math.hypot(loot.x - w.x, loot.y - w.y) < 10) {

@@ -373,6 +373,7 @@ function onWeb(world, p, dt) {
     web.py[ns] -= ky * h;
     for (const t of web.adj[ns]) web.pluck(t, power * def.mass * 0.6 + 40);
     world.ev.push({ k: 'struggle', prey: p.id, sp: p.sp, x: p.x, y: p.y, amp: power * def.mass });
+    if (def.armour || p.sp === 'dragonfly') thrash(world, p, ns, power, def);
   }
   p.timer -= dt * (1 - 0.8 * (p.wrap ?? 0));
   if (p.timer <= 0) {
@@ -383,6 +384,36 @@ function onWeb(world, p, dt) {
     for (const t of [...web.adj[ns]]) removeThread(world, web.tid[t], 3);
     if (web.ni(node) >= 0) web.removeNode(node);
     flyOff(world, p);
+  }
+}
+
+/**
+ * A heavy armoured insect throws its weight around: each kick loads the dry silk near it (frames and radials within
+ * two knots). Thread strength decides: a weak frame gives way, a strong one holds.
+ */
+function thrash(world, p, ns, power, def) {
+  const web = world.web;
+  const seen = new Set();
+  let frontier = [ns];
+  for (let hop = 0; hop < 2; hop++) {
+    const next = [];
+    for (const n of frontier) {
+      for (const t of web.adj[n]) {
+        if (seen.has(t)) continue;
+        seen.add(t);
+        next.push(web.other(t, n));
+        const type = web.type[t];
+        if (type !== 0 && type !== 1) continue;
+        // Load: the kick's momentum, spread over the hops, against the thread's strength.
+        const load = (power * def.mass * (hop ? 0.85 : 1) * range(world.rng, 0.6, 1.4)) / (web.str[t] * 11.5);
+        if (load > 1) {
+          world.ev.push({ k: 'tear', prey: p.id, sp: p.sp, x: web.x[n], y: web.y[n], th: web.tid[t], type });
+          removeThread(world, web.tid[t], 3);
+          return;
+        }
+      }
+    }
+    frontier = next;
   }
 }
 
@@ -545,8 +576,14 @@ export function hunt(world, dt) {
     if (world.prey.some((q) => q.heldBy === sp.id && q.st === 'held')) continue;
     for (const p of world.prey) {
       if (p.st !== 'fly' && p.st !== 'land' && p.st !== 'stuck') continue;
-      const reach = 12 + PREY[p.sp].size * 0.6;
+      const flying = p.st === 'fly';
+      const reach = flying ? 7 + PREY[p.sp].size * 0.35 : 12 + PREY[p.sp].size * 0.6;
       if (Math.hypot(p.x - sp.x, p.y - sp.y) > reach) continue;
+      // A flier sees it coming and swerves, often.
+      if (flying && p.dodged !== sp.air) {
+        p.dodged = sp.air;
+        if (chance(world.rng, { gnat: 0.7, midge: 0.7, fly: 0.55, moth: 0.3, beetle: 0.15, dragonfly: 0.6 }[p.sp] ?? 0.5)) continue;
+      }
       if (PREY[p.sp].armour || p.sp === 'dragonfly') {
         if (sp.venom <= 0) {
           hurt(world, sp, 8, 'kick');
@@ -563,7 +600,7 @@ export function hunt(world, dt) {
   for (const sp of world.spiders) {
     if (sp.act || sp.mode === 'air' || sp.mode === 'downed') continue;
     const p = world.prey.find((q) => q.heldBy === sp.id && q.st === 'held' && !world.balls.some((b) => b.prey === q.id));
-    if (p) sp.act = { k: 'eat', prey: p.id, t: 0, T: PREY[p.sp].eat * sp.mods.eat * (sp.sp === 'jumper' ? 0.8 : 1) };
+    if (p) sp.act = { k: 'eat', prey: p.id, t: 0, T: PREY[p.sp].eat * sp.mods.eat };
   }
   // Bolas balls: out along their throw, then reeled back (with whatever they caught).
   for (let i = world.balls.length - 1; i >= 0; i--) {

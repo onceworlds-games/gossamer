@@ -220,11 +220,16 @@ export function moveSpider(world, sp, inp, dt = DT) {
   const speed = (inp.hurry ? sp.mods.run : sp.mods.speed) * Math.min(1, mag);
   sp.noise = Math.min(1, Math.max(sp.noise, inp.hurry ? 0.8 : 0.35));
   sp.facing = Math.atan2(my, mx);
-  // Down with nothing leading down: lower yourself on a dragline.
-  if (my > 0.75 && sp.sp !== 'bolas' && sp.sp !== 'mantis' && !leadsDown(world, sp)) {
-    if (sp.silk >= DRAGLINE_MIN * 0.4) startHang(world, sp, 2);
+  // Down, held a moment, with nothing leading down: lower yourself on a dragline.
+  if (my > 0.75 && sp.sp !== 'bolas' && sp.sp !== 'mantis' && !inp.noDrop && !leadsDown(world, sp)) {
+    sp.dropHold = (sp.dropHold ?? 0) + dt;
+    if (sp.dropHold > 0.3 || inp.drop) {
+      sp.dropHold = 0;
+      if (sp.silk >= DRAGLINE_MIN * 0.4) startHang(world, sp, 2);
+    }
     return;
   }
+  sp.dropHold = 0;
   walk(world, sp, mx, my, speed * dt);
 }
 
@@ -295,6 +300,13 @@ function walk(world, sp, mx, my, budget) {
     const a = web.ta[t];
     const b = web.tb[t];
     const L = Math.max(1, web.len[t] || Math.hypot(web.x[b] - web.x[a], web.y[b] - web.y[a]));
+    if (L < 4) {
+      // A sliver of a thread: just step to whichever end the stick is closer to pointing at.
+      const end = sp.s < 0.5 ? b : a;
+      arrive(world, sp, end);
+      budget -= L;
+      continue;
+    }
     const ux = (web.x[b] - web.x[a]) / L;
     const uy = (web.y[b] - web.y[a]) / L;
     const along = ux * mx + uy * my;
@@ -307,13 +319,7 @@ function walk(world, sp, mx, my, budget) {
     const slow = web.type[t] === T_STICKY ? sp.mods.stickySlow : 1;
     const dir = along > 0 ? 1 : -1;
     const ds = (budget * slow * Math.abs(along) ** 0.3) / L;
-    // The water edge stops walking along the pond floor.
-    let ns = sp.s + dir * ds;
-    if (world.garden.water && web.type[t] === T_SURFACE && isGround(world, t)) {
-      const nx = web.x[a] + (web.x[b] - web.x[a]) * Math.min(1, Math.max(0, ns));
-      const wtr = world.garden.water;
-      if (nx > wtr.x0 && nx < wtr.x1) return;
-    }
+    const ns = sp.s + dir * ds;
     if (ns >= 1) {
       budget -= ((1 - sp.s) * L) / slow;
       arrive(world, sp, b);
@@ -486,14 +492,9 @@ function land(world, sp, t, u) {
   web.pluck(t, 260, 120, 0, 1);
   world.ev.push({ k: 'land', id: sp.id, x: sp.x, y: sp.y, th: web.tid[t] });
   if (drop > 150 && !sp.mods.balloon && web.type[t] === T_SURFACE) world.ev.push({ k: 'fallhurt', id: sp.id, amount: FALL_DAMAGE });
-  // Into the pond: float to the nearer bank.
+  // Onto the pond's lily pads: a splash, nothing worse.
   const wtr = world.garden.water;
-  if (wtr && web.type[t] === T_SURFACE && sp.x > wtr.x0 && sp.x < wtr.x1 && sp.y > wtr.y - 10) {
-    const bank = sp.x - wtr.x0 < wtr.x1 - sp.x ? wtr.x0 - 24 : wtr.x1 + 24;
-    const n = web.nearestNode(bank, wtr.y + 60, 140, (s) => web.kind[s] === 0);
-    if (n) placeAt(world, sp, n.id);
-    world.ev.push({ k: 'splash', id: sp.id, x: sp.x, y: sp.y });
-  }
+  if (wtr && web.type[t] === T_SURFACE && sp.x > wtr.x0 && sp.x < wtr.x1 && sp.y > wtr.y - 10) world.ev.push({ k: 'splash', id: sp.id, x: sp.x, y: sp.y });
 }
 
 /** Back to the Retreat (out of the world, or after being downed). */
