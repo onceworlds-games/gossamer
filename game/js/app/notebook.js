@@ -123,6 +123,7 @@ export class Notebook {
     const line = note(naturalist(last, res.t));
     line.prepend(st, ' ');
     col.append(line, sketches(res.t.eaten));
+    if (last.quota > 0) col.append(margin(`${last.food} of ${last.quota}`));
     const mine = res.out?.moult?.[this.game.me];
     if (mine) col.append(margin(`+${mine} moult`));
     if (this.game.unlockedNow?.length) col.append(margin(`New: ${this.game.unlockedNow.map((k) => SPECIES[k].name).join(', ')}`));
@@ -320,6 +321,14 @@ export function naturalist(h, t) {
   if (t.stolen) bits.push(`${cap(say(t.stolen))} taken from the web.`);
   if (t.mantisOff) bits.push('The mantis was driven off.');
   if (t.lostFood > 0) bits.push('Cocoons left at dawn.');
+  // A hungry night says why, so the next one can be better.
+  if (h.met === false && h.quota > 0) {
+    const free = Object.values(t.escaped ?? {}).reduce((a, b) => a + b, 0);
+    const caught = Object.values(t.caught ?? {}).reduce((a, b) => a + b, 0);
+    if (free >= 3) bits.push(`${cap(say(free))} tore free before I could wrap them.`);
+    else if (caught < h.quota * 0.35) bits.push('The web caught too little. Spin where they fly.');
+    else if (!t.lostFood) bits.push('I was too slow to eat.');
+  }
   return bits.join(' ');
 }
 

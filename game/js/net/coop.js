@@ -182,6 +182,8 @@ export class Coop {
         if (!data.c || typeof data.c !== 'object' || typeof data.c.t !== 'string') return;
         if (!run.world.spiders.some((s) => s.id === fromId)) return;
         if (run.world.cmds.length < 64) run.world.cmds.push({ ...clean(data.c), id: fromId });
+        // A friend's action shows up in their web at once, not at the next of the ten-a-second news.
+        this.sendT = Math.min(this.sendT, 0.03);
         break;
       case 'n':
         if (this.role !== 'mirror' || !run || data.mid !== this.mid) return;

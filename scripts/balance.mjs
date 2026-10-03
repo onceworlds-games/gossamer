@@ -1,6 +1,6 @@
 // The balance harness: bots play the real simulation across seeds and print what the spec's targets ask for.
 //   npm run balance            (about two minutes)
-//   node scripts/balance.mjs quick | full | <section>
+//   node scripts/balance.mjs quick | full | <section> [--seeds N]   (sections: quota silk catch beetle wasp species)
 import { createWorld, stepWorld } from '../game/js/sim/world.js';
 import { makeBot, botTick, buildFor } from '../game/js/sim/bots.js';
 import { planOrb } from '../game/js/sim/quickorb.js';
@@ -10,7 +10,8 @@ import { lanePoint } from '../game/js/sim/garden.js';
 import { mix } from '../game/js/sim/rng.js';
 
 const arg = process.argv[2] ?? 'all';
-const SEEDS = arg === 'quick' ? 8 : arg === 'full' ? 48 : 20;
+const flag = process.argv.indexOf('--seeds');
+const SEEDS = flag > 0 ? Math.max(1, Number(process.argv[flag + 1]) | 0) : arg === 'quick' ? 8 : arg === 'full' ? 48 : 20;
 const only = ['quick', 'full', 'all'].includes(arg) ? null : arg;
 const want = (name) => !only || only === name;
 const pct = (x) => `${Math.round(x * 100)}%`;

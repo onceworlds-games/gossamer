@@ -11,7 +11,7 @@ export const PATTERNS = {
   funnel: { rays: 7, spread: 0.62, spacing: 12, from: 16, fill: 0.9, closed: false },
   dense: { rays: 10, spread: 1, spacing: 12, from: 16, fill: 0.88, closed: true },
 };
-export const PREMIUM = 1.1;
+export const PREMIUM = 1.04; // a Quick Orb costs a little more than the same web thrown by hand
 
 export function patternsFor(tier) {
   return ['orb', ...(tier >= 1 ? ['ladder'] : []), ...(tier >= 2 ? ['funnel'] : []), ...(tier >= 3 ? ['dense'] : [])];
@@ -87,7 +87,7 @@ export function planOrb(web, hx, hy, r, pattern = 'orb', range = 520, reach = 0)
     miss = 0;
     const ex = hx + Math.cos(a) * hit.d;
     const ey = hy + Math.sin(a) * hit.d;
-    ends.push({ x: ex, y: ey, s: hit.s, id: web.tid[hit.s], t: hit.t, a, d: hit.d });
+    ends.push({ x: ex, y: ey, s: hit.s, id: web.tid[hit.s], type: web.type[hit.s], t: hit.t, a, d: hit.d });
   }
   const found = ends.filter(Boolean);
   const need = p.closed ? Math.ceil(p.rays * 0.75) : p.rays - 2;

@@ -7,7 +7,8 @@ import { useTarget, fitOrb } from './actions.js';
 import { retreatNode } from './garden.js';
 
 export const SKILLS = {
-  novice: { react: 0.9, aim: 40, threat: 0.15, siteLuck: 0.8, repair: 0, prioritise: false, retreatHp: 0 },
+  // A novice builds where the visitors fly nine times in ten: the lanes shimmer at dusk, when the site is chosen.
+  novice: { react: 0.9, aim: 40, threat: 0.15, siteLuck: 0.9, repair: 0, prioritise: false, retreatHp: 0 },
   average: { react: 0.55, aim: 14, threat: 0.55, siteLuck: 0.85, repair: 0.6, prioritise: false, retreatHp: 25 },
   good: { react: 0.2, aim: 5, threat: 0.95, siteLuck: 1, repair: 1, prioritise: true, retreatHp: 35 },
   // A capable weaver that ignores hunters entirely (the wasp measurement's "unprotected" spider).

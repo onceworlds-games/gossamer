@@ -344,13 +344,18 @@ function orbStep(world, sp, act) {
     const hubPos = web.pos(act.hub);
     if (!hubPos) return true;
     let to = 0;
-    const ts = web.ti(end.id);
+    let ts = web.ti(end.id);
+    if (ts < 0) {
+      // An earlier spoke split this branch where it landed: the end is on one of its halves now.
+      const near = web.nearestThread(end.x, end.y, 10, (s) => web.type[s] === end.type && web.kind[web.ta[s]] !== N_PREY && web.kind[web.tb[s]] !== N_PREY);
+      ts = near ? near.s : -1;
+    }
     if (ts >= 0) {
       const c = web.closest(ts, end.x, end.y);
       const L = web.len[ts] || 1;
       if (c.t * L < MERGE) to = web.nid[web.ta[ts]];
       else if ((1 - c.t) * L < MERGE) to = web.nid[web.tb[ts]];
-      else to = splitAt(world, end.id, c.t, { player: true })?.node ?? 0;
+      else to = splitAt(world, web.tid[ts], c.t, { player: true })?.node ?? 0;
     } else {
       const n = web.nearestNode(end.x, end.y, 14, (s) => web.kind[s] !== N_PREY);
       to = n?.id ?? 0;
