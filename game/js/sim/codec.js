@@ -2,6 +2,7 @@
 // carries on from it; and the light snapshot (10 Hz) that other players draw prey and hunters from.
 import { PREY_KEYS, PREY, SPECIES } from './data.js';
 import { spiderMods } from './spider.js';
+import { addSpider } from './world.js';
 
 const ST = ['fly', 'land', 'stuck', 'subdued', 'cocoon', 'held', 'fall', 'gone'];
 const r1 = (v) => Math.round(v * 10) / 10;
@@ -75,7 +76,10 @@ export function unpackWorld(w, ck, poses = null, keep = null) {
     if (Array.isArray(m.lights)) m.lights.forEach((l, i) => w.lights[i] && Array.isArray(l) && Object.assign(w.lights[i], { x: Number(l[0]) || w.lights[i].x, y: Number(l[1]) || w.lights[i].y, power: Number(l[2]) || w.lights[i].power }));
     if (Array.isArray(m.spiders)) {
       for (const s of m.spiders) {
-        const sp = w.spiders.find((q) => q.id === s.id);
+        if (!s || typeof s.id !== 'string') continue;
+        let sp = w.spiders.find((q) => q.id === s.id);
+        // Someone let in after the night began: give them their spider back too.
+        if (!sp && w.spiders.length < 4) sp = addSpider(w, { id: s.id, sp: SPECIES[s.sp] ? s.sp : 'orb', up: s.up, tr: Array.isArray(s.tr) ? s.tr : [] });
         if (!sp) continue;
         Object.assign(sp, { hp: s.hp, silk: s.silk, venom: s.venom, stats: { ...sp.stats, ...s.stats }, downed: s.downed || 0 });
         if (s.act && s.act.k !== 'orb') sp.act = s.act;
@@ -146,7 +150,7 @@ export function snapshot(w) {
     w: w.wasps.map((x) => [x.id, ri(x.x), ri(x.y), ri(x.vx), ri(x.vy), x.st]),
     r: w.wren ? [w.wren.st, r1(w.wren.t), ri(w.wren.x), ri(w.wren.y), w.wren.dir, w.wren.warn, w.wren.band] : 0,
     m: w.mantis ? [ri(w.mantis.x), ri(w.mantis.y), w.mantis.st, r1(w.mantis.facing ?? 0)] : 0,
-    s: w.spiders.map((sp) => [sp.id, r1(sp.hp), r1(sp.silk), sp.venom, sp.mode === 'downed' ? 1 : 0, sp.act ? sp.act.k : 0, sp.act?.prey ?? 0, r1(sp.act?.t ?? 0), r1(sp.act?.T ?? 0)]),
+    s: w.spiders.map((sp) => [sp.id, r1(sp.hp), r1(sp.silk), sp.venom, sp.mode === 'downed' ? 1 : 0, sp.act ? sp.act.k : 0, sp.act?.prey ?? 0, r1(sp.act?.t ?? 0), r1(sp.act?.T ?? 0), sp.sp]),
     we: { x: r1(w.weather.windX), s: Math.round(w.weather.sway * 1000) / 1000, r: w.weather.rain ? 1 : 0, m: w.weather.mist ? 1 : 0 },
     l: w.lures.map((l) => [l.id, l.owner, ri(l.x), ri(l.y), r1(l.power)]),
     b: w.balls.map((b) => [b.id, b.owner, ri(b.x), ri(b.y)]),
@@ -185,9 +189,10 @@ export function applySnapshot(w, s, myId) {
     w.mantis ??= { st: 'hunt', facing: 0 };
     Object.assign(w.mantis, { x: num(s.m[0]), y: num(s.m[1]), st: typeof s.m[2] === 'string' ? s.m[2] : 'hunt', facing: num(s.m[3]) });
   } else w.mantis = null;
-  for (const a of Array.isArray(s.s) ? s.s : []) {
-    if (!Array.isArray(a)) continue;
-    const sp = w.spiders.find((q) => q.id === a[0]);
+  for (const a of Array.isArray(s.s) ? s.s.slice(0, 4) : []) {
+    if (!Array.isArray(a) || typeof a[0] !== 'string') continue;
+    let sp = w.spiders.find((q) => q.id === a[0]);
+    if (!sp && w.spiders.length < 4) sp = addSpider(w, { id: a[0], sp: SPECIES[a[9]] ? a[9] : 'orb', remote: a[0] !== myId });
     if (!sp) continue;
     sp.hp = num(a[1], sp.hp);
     const silk = num(a[2], sp.silk);

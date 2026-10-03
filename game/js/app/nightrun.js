@@ -189,12 +189,7 @@ export class NightRun {
     w.t += DT;
     w.tick++;
     const me = this.me();
-    if (me && !this.watch) {
-      moveSpider(w, me, inp, DT);
-      if (me.lost) {
-        me.lost = false;
-      }
-    }
+    if (me && !me.remote) moveSpider(w, me, inp, DT);
     const web = w.web;
     web.load.fill(0, 0, web.nodeHigh);
     web.step({ sway: w.weather.sway, windX: w.weather.windX, windY: w.weather.windY });
