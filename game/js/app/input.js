@@ -18,10 +18,20 @@ export class Input {
     this.charging = false;
     this.spin = 0;
     this.spinning = false;
-    this.enabled = false;
+    this._on = false;
     this.lastTap = null;
     this.pad = { on: false, aimX: 0, aimY: 0, prev: [] };
     this.bind();
+  }
+
+  get enabled() {
+    return this._on;
+  }
+
+  /** Switching the controls off (the notebook is up) lets go of every key and gesture. */
+  set enabled(v) {
+    if (!v && this._on) this.clear();
+    this._on = !!v;
   }
 
   bind() {
@@ -68,7 +78,11 @@ export class Input {
 
   key(e, down) {
     const k = (e.key || '').toLowerCase();
-    if (!this.enabled) return;
+    // A key let go while the notebook is up must not stay held for the next night.
+    if (!this.enabled) {
+      if (!down) this.keys.delete(k);
+      return;
+    }
     if (['tab', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
     if (down) {
       if (this.keys.has(k) && e.repeat) return;

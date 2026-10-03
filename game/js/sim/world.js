@@ -138,13 +138,22 @@ export function stepWorld(world, inputs = {}) {
   const ev = world.script.events;
   while (world.si < ev.length && ev[world.si].t <= world.t) runEvent(world, ev[world.si++]);
   updateWeather(world, dt);
-  for (const c of world.cmds) command(world, c);
-  world.cmds.length = 0;
+  // A command that throws (a page that lies) is dropped, never retried, and never stops the night.
+  const cmds = world.cmds;
+  world.cmds = [];
+  for (const c of cmds) {
+    try {
+      command(world, c);
+    } catch {
+      world.cmdErrors = (world.cmdErrors | 0) + 1;
+    }
+  }
   for (const sp of world.spiders) {
     if (sp.lost) {
       sp.lost = false;
       if (!sp.remote) loseFooting(world, sp);
     }
+    if (sp.queued) drainQueued(world, sp);
     if (!sp.remote) moveSpider(world, sp, inputs[sp.id] ?? NOINPUT, dt);
     runActions(world, sp, dt);
     upkeep(world, sp, dt);
@@ -292,6 +301,24 @@ function updateSwarms(world, dt) {
 }
 
 // ---------------------------------------------------------------- commands (the host checks each one)
+const QUEUE_FOR = 0.45; // s a cast or an orb asked for during the last one waits for its turn
+
+/** True while the spider is in the short pause after a cast (or riding a spiral strand): a cast now would be refused as busy. */
+function briefly(sp) {
+  return sp.mode !== 'downed' && ((sp.busy > 0 && sp.busy <= 0.4 && !sp.act) || (sp.act?.k === 'spin' && sp.busy <= 0));
+}
+
+function drainQueued(world, sp) {
+  const q = sp.queued;
+  if (world.t > q.until || sp.mode === 'downed') {
+    sp.queued = null;
+    return;
+  }
+  if (sp.busy > 0 || sp.act || sp.mode === 'air') return;
+  sp.queued = null;
+  command(world, q.c);
+}
+
 export function command(world, c) {
   if (!c || typeof c !== 'object') return;
   const sp = spiderById(world, c.id);
@@ -299,7 +326,14 @@ export function command(world, c) {
   const num = (v) => (Number.isFinite(+v) ? +v : NaN);
   switch (c.t) {
     case 'cast':
-      cast(world, sp, num(c.type) | 0, num(c.x), num(c.y));
+    case 'orb':
+      // Tapping a little ahead of the spinneret (a rhythm of casts) is remembered, not refused.
+      if (briefly(sp) && !c.queued) {
+        sp.queued = { c: { ...c, queued: true }, until: world.t + QUEUE_FOR };
+        return;
+      }
+      if (c.t === 'orb') startOrb(world, sp, num(c.x), num(c.y), num(c.r), String(c.p ?? 'orb'));
+      else cast(world, sp, num(c.type) | 0, num(c.x), num(c.y), num(c.sr));
       break;
     case 'cut':
       cut(world, sp, num(c.x), num(c.y));
@@ -313,9 +347,6 @@ export function command(world, c) {
     case 'shake':
       shake(world, sp);
       break;
-    case 'orb':
-      startOrb(world, sp, num(c.x), num(c.y), num(c.r), String(c.p ?? 'orb'));
-      break;
     case 'lure':
       placeLure(world, sp);
       break;
@@ -327,7 +358,7 @@ export function command(world, c) {
       break;
     case 'prey':
       // The tutorial sends a visitor straight at the first web.
-      if (world.mode === 'tutorial' && PREY[c.sp] && Number.isFinite(num(c.x))) {
+      if (world.mode === 'tutorial' && typeof c.sp === 'string' && Object.hasOwn(PREY, c.sp) && Number.isFinite(num(c.x))) {
         const p = spawnPrey(world, c.sp, -1, { x: num(c.x), y: num(c.y) });
         if (p) aimAt(p, c);
       }

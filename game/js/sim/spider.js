@@ -78,6 +78,7 @@ export function createSpider(id, species, o = {}) {
     venom: 0,
     busy: 0,
     act: null, // host-run action: { k: 'wrap' | 'eat' | 'orb' | 'revive' | 'give' | 'spin', ... }
+    glide: null, // { x0, y0, x1, y1, t, T }: easing to the hub while a Quick Orb is spun
     regenDelay: 0,
     still: 0,
     invuln: 0,
@@ -107,6 +108,7 @@ export function refreshMods(sp) {
 export function placeAt(world, sp, id) {
   const p = world.web.pos(id);
   if (!p) return false;
+  sp.glide = null;
   sp.mode = 'walk';
   sp.node = id;
   sp.from = id;
@@ -197,6 +199,7 @@ const scratch = {};
  */
 export function moveSpider(world, sp, inp, dt = DT) {
   if (sp.mode === 'downed') return void pose(world, sp);
+  if (sp.glide && glideStep(world, sp, dt)) return;
   if (sp.busy > 0 || (sp.act && sp.act.k !== 'give')) {
     if (sp.mode === 'walk' && !pose(world, sp)) loseFooting(world, sp);
     else if (sp.mode === 'hang') swing(world, sp, null, dt);
@@ -231,6 +234,35 @@ export function moveSpider(world, sp, inp, dt = DT) {
   }
   sp.dropHold = 0;
   walk(world, sp, mx, my, speed * dt);
+}
+
+/** Spinning a Quick Orb: the spider eases over to the hub as the first spokes go out, so it never jumps there at the end. */
+export function startGlide(sp, x, y) {
+  const d = Math.hypot(x - sp.x, y - sp.y);
+  sp.glide = { x0: sp.x, y0: sp.y, x1: x, y1: y, t: 0, T: Math.max(0.35, Math.min(2.2, 0.3 + d / 300)) };
+}
+
+function glideStep(world, sp, dt) {
+  const g = sp.glide;
+  g.t += dt;
+  // The hub sags a little as the spokes go out: end where it really is.
+  if (g.node) {
+    const hp = world.web.pos(g.node);
+    if (hp) {
+      g.x1 = hp.x;
+      g.y1 = hp.y;
+    }
+  }
+  if (g.t > g.T + 6) {
+    sp.glide = null;
+    return false;
+  }
+  const f = Math.min(1, g.t / g.T);
+  const e = f * f * (3 - 2 * f);
+  sp.x = g.x0 + (g.x1 - g.x0) * e;
+  sp.y = g.y0 + (g.y1 - g.y0) * e;
+  if (f < 1 && Math.hypot(g.x1 - g.x0, g.y1 - g.y0) > 6) sp.facing = Math.atan2(g.y1 - g.y0, g.x1 - g.x0);
+  return true;
 }
 
 function leadsDown(world, sp) {
@@ -499,6 +531,7 @@ function land(world, sp, t, u) {
 
 /** Back to the Retreat (out of the world, or after being downed). */
 export function rescue(world, sp, damage = 0) {
+  sp.glide = null;
   placeAt(world, sp, retreatNode(world.garden));
   if (damage) world.ev.push({ k: 'fallhurt', id: sp.id, amount: damage });
 }
@@ -633,6 +666,7 @@ export function hurt(world, sp, amount, why) {
     sp.mode = 'downed';
     sp.downed = 0;
     sp.act = null;
+    sp.glide = null;
     sp.air = null;
     sp.hang = null;
     world.ev.push({ k: 'downed', id: sp.id, why, x: sp.x, y: sp.y });

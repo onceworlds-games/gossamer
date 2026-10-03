@@ -4,14 +4,15 @@
 // presence; actions go to the host as commands, and the host checks them. Every message is checked for shape.
 import { platform } from '../app/platform.js';
 import { packWorld, snapshot, applySnapshot, applyPose } from '../sim/codec.js';
-import { remapSplit, loseFooting } from '../sim/spider.js';
+import { remapSplit, loseFooting, startGlide } from '../sim/spider.js';
 import { addSpider } from '../sim/world.js';
-import { ensureRoster } from '../sim/season.js';
+import { ensureRoster, setSpecies } from '../sim/season.js';
+import { SPECIES } from '../sim/data.js';
 
 const SEND_HZ = 10;
 const CK_EVERY = 2;
 const POSE_HZ = 15;
-const SHARE = new Set(['cast', 'spin', 'pluck', 'stick', 'struggle', 'snap', 'tear', 'shake', 'eat', 'cocoon', 'swoop', 'wrenwarn', 'gustwarn', 'alarm', 'orbdone', 'downed', 'dawn', 'nightfall', 'mantis', 'mantisoff', 'sting', 'waspbit', 'stolen', 'escape', 'lost', 'revived', 'wake', 'hurt', 'refuse', 'perfect', 'rain', 'mist', 'bloom', 'strike', 'windup', 'mantisfall', 'grab', 'bolashit', 'place', 'knock', 'caught', 'wasp', 'waspspot', 'unseen', 'lure', 'fling', 'flee', 'perch', 'kicked', 'cut', 'waspcut']);
+const SHARE = new Set(['cast', 'spin', 'pluck', 'stick', 'struggle', 'snap', 'tear', 'shake', 'eat', 'cocoon', 'swoop', 'wrenwarn', 'gustwarn', 'alarm', 'orbdone', 'downed', 'dawn', 'nightfall', 'mantis', 'mantisoff', 'sting', 'waspbit', 'stolen', 'escape', 'lost', 'revived', 'wake', 'hurt', 'refuse', 'perfect', 'rain', 'mist', 'bloom', 'strike', 'windup', 'mantisfall', 'grab', 'bolashit', 'place', 'knock', 'caught', 'wasp', 'waspspot', 'unseen', 'lure', 'fling', 'flee', 'perch', 'kicked', 'cut', 'waspcut', 'orbstart']);
 
 const num = (v, d = 0) => (Number.isFinite(v) ? v : d);
 
@@ -91,7 +92,9 @@ export class Coop {
     this.poseT = 1 / POSE_HZ;
     const me = this.run?.me();
     if (!me) {
-      this.room.setPresence?.({ mid: this.mid, st: 'watch' });
+      // A watcher who asked to join at dusk says so (and with which spider); the host lets them in.
+      const want = this.game.wantsIn && this.game.wantsInMid === this.mid ? this.game.wantsIn : null;
+      this.room.setPresence?.({ mid: this.mid, st: 'watch', join: want ? 1 : 0, sp: want ?? '' });
       return;
     }
     const hang = me.hang ? (me.hang.anchor.node ? { node: me.hang.anchor.node, len: Math.round(me.hang.len) } : { th: me.hang.anchor.th, s: Math.round(me.hang.anchor.s * 1000) / 1000, len: Math.round(me.hang.len) }) : null;
@@ -227,13 +230,22 @@ export class Coop {
       for (const e of d.e.slice(0, 80)) {
         if (!e || typeof e !== 'object' || typeof e.k !== 'string' || !SHARE.has(e.k)) continue;
         const ev = sanitizeEvent(e);
+        // The host is spinning an orb for us: ease over to its hub meanwhile, so we don't jump there at the end.
+        if (ev.k === 'orbstart' && me && ev.id === me.id && me.mode === 'walk' && Number.isFinite(ev.hx) && Number.isFinite(ev.hy)) startGlide(me, ev.hx, ev.hy);
+        // The first spoke leaves the hub: that knot is where we are heading.
+        if (ev.k === 'spin' && me && ev.id === me.id && me.glide && !me.glide.node) {
+          const hub = w.web.nearestNode(ev.x, ev.y, 8, (s) => w.web.kind[s] === 1 && w.web.nid[s] >= 2000);
+          if (hub) me.glide.node = hub.id;
+        }
         if (ev.k === 'place' && me && ev.id === me.id && w.web.ni(ev.node) >= 0) {
+          me.glide = null;
           me.mode = 'walk';
           me.node = ev.node;
           me.th = 0;
           me.hang = null;
           me.air = null;
         }
+        if ((ev.k === 'orbdone' || ev.k === 'knock' || ev.k === 'downed') && me && ev.id === me.id) me.glide = null;
         if (ev.k === 'knock' && me && ev.id === me.id) {
           me.node = 0;
           me.th = 0;
@@ -321,23 +333,29 @@ export class Coop {
   admitLate() {
     const run = this.run;
     if (this.role !== 'host' || !run || run.world.phase !== 'dusk') return;
-    const watchers = (this.room.spectators ?? []).filter((p) => p.connected !== false && !p.idle);
+    // Only those who picked a spider and asked (a join flag in presence): nobody lands in the night unasked.
+    const watchers = (this.room.spectators ?? []).filter((p) => {
+      const pr = p.presence;
+      return p.connected !== false && pr && typeof pr === 'object' && pr.mid === this.mid && pr.join === 1;
+    });
     if (!watchers.length) return;
     const s = this.game.season();
     if (!s) return;
     let wrote = false;
+    const let_in = [];
     for (const p of watchers) {
       if (run.world.spiders.some((sp) => sp.id === p.id)) continue;
-      // A friend who arrives at dusk gets a spider in the season and a place on the web.
+      // A friend who arrives at dusk gets a spider in the season (the one they picked) and a place on the web.
       if (!s.roster[p.id]) {
-        ensureRoster(s, p.id, 'orb');
+        ensureRoster(s, p.id, typeof p.presence.sp === 'string' && SPECIES[p.presence.sp] ? p.presence.sp : 'orb');
         wrote = true;
-      }
+      } else if (setSpecies(s, p.id, String(p.presence.sp))) wrote = true;
       const r = s.roster[p.id];
       addSpider(run.world, { id: p.id, sp: r.sp, up: r.up, tr: r.tr });
+      let_in.push(p.id);
     }
     if (wrote) this.game.writeSeason(s);
-    this.room.admit?.(watchers.map((p) => p.id));
+    if (let_in.length) this.room.admit?.(let_in);
   }
 }
 

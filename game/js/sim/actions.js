@@ -6,7 +6,7 @@ import {
   PLAYER_NODES, PLAYER_THREADS, SPECIES, REACH, SILK_PER_FOOD, HP_PER_FOOD, REVIVE_TIME, JUNCTION_MASS, WASP, DT,
 } from './data.js';
 import { crossing } from './web.js';
-import { placeAt, remapSplit, pose, hurt, loseFooting, anchorPos } from './spider.js';
+import { placeAt, remapSplit, pose, hurt, loseFooting, anchorPos, startGlide } from './spider.js';
 import { planOrb, orbSteps, PATTERNS, PREMIUM, patternsFor } from './quickorb.js';
 
 const refuse = (world, sp, why) => {
@@ -120,13 +120,19 @@ function onRadial(web, n) {
   return web.adj[n].some((t) => web.type[t] === T_RADIAL);
 }
 
-export function cast(world, sp, type, tx, ty) {
+/** How far from the pointer a cast looks for something to hold: at least 48 screen px, so a thumb zoomed out still lands. */
+export function snapRadiusFor(zoom) {
+  return Math.max(SNAP_RADIUS, Math.min(SNAP_RADIUS * 1.8, 48 / Math.max(0.2, zoom || 1)));
+}
+
+export function cast(world, sp, type, tx, ty, snapR) {
   const web = world.web;
   if (sp.sp !== 'orb') return refuse(world, sp, 'species');
   if (![T_FRAME, T_RADIAL, T_STICKY, T_ALARM].includes(type)) return false;
   if (sp.mode === 'downed' || sp.mode === 'air') return refuse(world, sp, 'busy');
   if (sp.busy > 0 || sp.act) return refuse(world, sp, 'busy');
-  let target = resolveTarget(world, sp, tx, ty);
+  const radius = Number.isFinite(snapR) ? Math.max(SNAP_RADIUS, Math.min(SNAP_RADIUS * 1.8, snapR)) : SNAP_RADIUS;
+  let target = resolveTarget(world, sp, tx, ty, radius);
   if (!target) return refuse(world, sp, 'nothing');
   target = catchOnBranch(world, sp, target);
   const len = Math.hypot(target.x - sp.x, target.y - sp.y);
@@ -310,7 +316,8 @@ export function startOrb(world, sp, hx, hy, r, pattern) {
   if (!plan.ok) return refuse(world, sp, plan.why === 'silk' ? 'silk' : 'open');
   if (world.web.playerNodes + 60 > PLAYER_NODES || world.web.playerThreads + 70 > PLAYER_THREADS) return refuse(world, sp, 'full');
   sp.act = { k: 'orb', plan, steps: orbSteps(plan), i: 0, timer: 0.1, hub: 0, spokes: {}, at: null };
-  world.ev.push({ k: 'orbstart', id: sp.id, x: hx, y: hy, pattern });
+  startGlide(sp, plan.hub.x, plan.hub.y);
+  world.ev.push({ k: 'orbstart', id: sp.id, x: hx, y: hy, pattern, hx: Math.round(plan.hub.x), hy: Math.round(plan.hub.y) });
   return true;
 }
 
@@ -598,12 +605,14 @@ export function runActions(world, sp, dt) {
     }
     case 'orb': {
       act.timer -= dt;
+      if (sp.glide && act.hub) sp.glide.node = act.hub;
       while (act.timer <= 0 && sp.act) {
         const stop = orbStep(world, sp, act);
         const next = act.steps[act.i];
         act.timer += next?.k === 'spoke' ? 0.16 : 0.1;
         if (stop || act.i >= act.steps.length) {
           sp.act = null;
+          sp.glide = null;
           if (act.hub && web.ni(act.hub) >= 0) {
             placeAt(world, sp, act.hub);
             world.ev.push({ k: 'place', id: sp.id, node: act.hub });
