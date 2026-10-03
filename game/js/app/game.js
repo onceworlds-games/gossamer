@@ -130,6 +130,9 @@ export class Game {
     r.on('starting', () => {
       this.screens.closeBook(true);
       this.audio.ui('start');
+      // A private match closes to newcomers when it starts. Friends may still follow an invite into the dusk (and watch
+      // the night after it), so the door is opened again, from this event and not from a frame loop.
+      if (this.amHost()) this.room.setOpen?.(true);
     });
     r.on('matchstart', () => this.enterNight());
     r.on('matchend', () => this.afterNight());
