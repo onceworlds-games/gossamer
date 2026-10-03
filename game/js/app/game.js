@@ -14,7 +14,7 @@ import { newSeason, parseSeason, ensureRoster, applyNight, buy, pickTrait, setSp
 import { parseProfile, recordNight, recordSeason, checkUnlocks } from '../sim/profile.js';
 import { tally } from '../sim/night.js';
 import { packWorld, unpackWorld } from '../sim/codec.js';
-import { SPECIES, GARDENS, T_SURFACE } from '../sim/data.js';
+import { SPECIES, GARDENS, TRAITS, T_SURFACE } from '../sim/data.js';
 
 const DAWN_HOLD = 4.5;
 
@@ -259,6 +259,13 @@ export class Game {
       case 'trait':
         changed = lobby && pickTrait(s, from, String(req.tr));
         break;
+      case 'hatch':
+        // A friend's hatchling: its trait is pinned at a fresh season's start.
+        if (lobby && s.night === 1 && !s.history.length && s.roster[from] && !s.roster[from].tr.length && TRAITS[req.tr]) {
+          s.roster[from].tr = [String(req.tr)];
+          changed = true;
+        }
+        break;
       case 'garden':
         if (from === this.me && lobby && s.night === 1 && !s.history.length && GARDENS[req.g] && this.profile.unlocked.gardens.includes(req.g)) {
           s.garden = req.g;
@@ -293,6 +300,22 @@ export class Game {
     if (changed) {
       if (req.t === 'garden' || req.t === 'cold') this.room.clearReady?.();
       this.writeSeason(s);
+    }
+  }
+
+  /** Our hatchling: ask the host to pin it when a fresh season starts without it, and use it up once it's pinned. */
+  syncHatchling() {
+    const s = this.season();
+    const hatch = this.profile.hatchlings[0];
+    if (!s || !hatch || s.night !== 1 || s.history.length) return;
+    const mine = s.roster[this.me];
+    if (!mine) return;
+    if (mine.tr.includes(hatch)) {
+      this.profile.hatchlings.shift();
+      this.markDirty();
+    } else if (!mine.tr.length && this.hatchAsked !== s.seed && this.room.match?.phase === 'lobby') {
+      this.hatchAsked = s.seed;
+      this.request(this.me, { t: 'hatch', tr: hatch });
     }
   }
 
@@ -553,6 +576,7 @@ export class Game {
     this.panSeen = { x: pan.x, y: pan.y };
     this.net.frame(dt);
     if (this.amHost() && this.screen === 'book') this.hostEnsureSeason();
+    if (this.screen === 'book') this.syncHatchling();
     const run = this.screen === 'night' && this.run ? this.run : null;
     if (run) {
       const playing = this.room.match?.phase === 'playing' && !this.room.match?.paused && !this.paused;
