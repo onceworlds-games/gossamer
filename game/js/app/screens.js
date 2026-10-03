@@ -28,7 +28,6 @@ export class Screens {
     box.append(h, b);
     this.root.append(box);
     this.el = box;
-    setTimeout(() => b.focus?.({ preventScroll: true }), 50);
   }
 
   book() {

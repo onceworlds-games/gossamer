@@ -30,7 +30,8 @@ export class Camera {
     const short = Math.min(this.sw, this.sh);
     const long = Math.max(this.sw, this.sh);
     // How much of the garden to show: enough for the web around you, never so little that silk is a hair.
-    let view = 430;
+    // Phones held upright show less garden, so the silk and its visitors stay big enough to read.
+    let view = short < 520 ? 360 : 430;
     if (box) {
       const span = Math.max(box.x1 - box.x0, box.y1 - box.y0) + 150;
       view = Math.max(view, Math.min(1000, span * (short / long < 0.7 ? 1.05 : 1)));
