@@ -456,7 +456,7 @@ export class Game {
       jumper: [{ id: 'leap', label: 'Pounce', key: ' ' }, { id: 'bite', label: 'Bite', key: 'f' }, { id: 'act', label: act, key: 'e' }, { id: 'run', label: 'Run', key: 'Shift' }],
       bolas: [{ id: 'spin', label: 'Swing', key: 'b' }, { id: 'lure', label: 'Lure', key: 'l' }, { id: 'act', label: act, key: 'e' }, { id: 'leap', label: 'Leap', key: ' ' }],
     };
-    platform.controls.set({ stick: 'analog', buttons: layouts[me.sp] ?? layouts.orb });
+    platform.controls.set({ stick: 'analog', zone: 'corner', buttons: layouts[me.sp] ?? layouts.orb });
   }
 
   /** Host: dawn came. Hold the dawn a moment, then tally, update the season and end the match. */
