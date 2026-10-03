@@ -32,7 +32,7 @@ one of three traits. Ten nights make a season.
 | Q | | Shake the dew off (with the Dew Shake upgrade) |
 | B (hold) and L | Swing, Lure | Bolas spider: swing and throw the bolas, set a lure |
 | Shift | Run (hunter) | Hurry (louder) |
-| Tab, mouse wheel | Two-finger drag | Ping a spot for friends; zoom / pan |
+| Tab, mouse wheel | Two-finger tap, drag | Ping a spot for friends; zoom / pan |
 
 ## What's in it
 

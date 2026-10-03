@@ -1,6 +1,6 @@
 // Keyboard, mouse, touch, the platform's on-screen controls and gamepads, turned into one set of intents. Keys are
 // cleared when the window loses focus; held mouse drags survive leaving the window (pointer capture); two fingers
-// pan instead of aiming; a held finger shows a loupe so a thread lands where you meant.
+// pan instead of aiming (a quick two-finger tap pings); a held finger shows a loupe so a thread lands where you meant.
 import { platform } from './platform.js';
 
 const MOVE = { w: [0, -1], arrowup: [0, -1], s: [0, 1], arrowdown: [0, 1], a: [-1, 0], arrowleft: [-1, 0], d: [1, 0], arrowright: [1, 0] };
@@ -180,7 +180,7 @@ export class Input {
     if (this.touches.size >= 2) {
       this.aiming = null;
       const c = this.centroid();
-      this.pan = { active: true, lx: c[0], ly: c[1], x: this.pan.x, y: this.pan.y, moved: 0 };
+      this.pan = { active: true, lx: c[0], ly: c[1], x: this.pan.x, y: this.pan.y, moved: 0, t0: performance.now() };
       return;
     }
     this.aiming = { id: e.pointerId, x, y: y - 10, t0: performance.now(), moved: 0, touch: true };
@@ -227,8 +227,9 @@ export class Input {
     if (this.pan.active && (e.pointerType === 'mouse' ? this.pan.right : true)) {
       this.touches.delete(e.pointerId);
       if (this.touches.size < 2 && !(e.pointerType === 'mouse' && !this.pan.right)) {
-        // A right-click that didn't move is a cut.
+        // A right-click that didn't move is a cut; a quick two-finger tap pings the spot between the fingers.
         if (this.pan.right && this.pan.moved < 6 && !cancelled) this.events.push({ t: 'cut', sx: x, sy: y });
+        else if (!this.pan.right && this.pan.moved < 12 && !cancelled && performance.now() - (this.pan.t0 ?? 0) < 350) this.events.push({ t: 'ping', sx: this.pan.lx, sy: this.pan.ly });
         this.pan.active = false;
         this.pan.right = false;
       }
