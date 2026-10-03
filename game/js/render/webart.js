@@ -3,9 +3,11 @@
 // own pattern (frame heavy, radial plain, sticky beaded, alarm dashed), so colour is never the only cue.
 import { T_FRAME, T_RADIAL, T_STICKY, T_ALARM, T_DRAG, T_SURFACE, THREADS, N_PREY } from '../sim/data.js';
 import { SILVER, AMBER, RUST, rgba, SILKS } from './palette.js';
+import { glowSprite } from './backdrop.js';
 
 const ALPHA = [0.78, 0.62, 0.86, 0.7, 0.5];
 const pulses = [];
+const GLINTS = new Float32Array(1500); // x, y, size of the beads that flare at dawn
 
 /** Dew bead sprites by style: round beads, starred ones with a glint, or prisms that split the moonlight. */
 const beads = {};
@@ -171,6 +173,8 @@ export function drawWeb(ctx, world, o) {
     const style = o.dewStyle === 'star' || o.dewStyle === 'prism' ? o.dewStyle : 'round';
     let sprite = beadSprite(style);
     let budget = o.q === 'high' ? 2200 : 700;
+    const glints = (o.dawn ?? 0) > 0.02;
+    let nGlint = 0;
     for (let s = 0; s < web.threadHigh && budget > 0; s++) {
       if (web.tid[s] < 0 || web.type[s] === T_SURFACE) continue;
       const dew = web.dew[s];
@@ -188,7 +192,24 @@ export function drawWeb(ctx, world, o) {
         const sz = size * (0.6 + ((h >>> 20) & 7) / 14);
         if (style === 'prism') sprite = beadSprite(style, (h >>> 4) % 6);
         ctx.drawImage(sprite, x - sz, y - sz, sz * 2, sz * 2);
+        if (glints && (h >>> 12) % 3 === 0 && nGlint < GLINTS.length - 3) {
+          GLINTS[nGlint++] = x;
+          GLINTS[nGlint++] = y;
+          GLINTS[nGlint++] = sz;
+        }
       }
+    }
+    // Dawn catches the dew: every third bead flares, as in a photograph of a web at first light.
+    if (nGlint) {
+      const gs = glowSprite();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.55 * o.dawn;
+      for (let i = 0; i < nGlint; i += 3) {
+        const r = GLINTS[i + 2] * 2.6;
+        ctx.drawImage(gs, GLINTS[i] - r, GLINTS[i + 1] - r, r * 2, r * 2);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
     }
   }
 }

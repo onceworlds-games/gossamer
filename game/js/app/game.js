@@ -464,7 +464,7 @@ export class Game {
     const t = tally(run.world);
     const ids = run.world.spiders.map((sp) => sp.id);
     const out = applyNight(s, t, ids, run.world.seed);
-    const result = { mid: this.room.match.id, t, out, season: { night: s.night, lives: s.lives, over: s.over, score: s.score, mode: s.mode } };
+    const result = { mid: this.room.match.id, t, out, sk: run.sketch(), season: { night: s.night, lives: s.lives, over: s.over, score: s.score, mode: s.mode } };
     this.room.setState('result', result);
     this.writeSeason(s);
     for (const k of ['ck', 'ckn', 'ckt', 'ckp']) this.room.setState(k, null);
@@ -670,7 +670,7 @@ export class Game {
       focus: run.focusPoint(),
       reduced: this.reduced,
       aim,
-      mark: this.hints.step === 'cast' || this.hints.step === 'orb' ? run.mark(this.hints.step) : null,
+      mark: this.hints.step === 'cast' || this.hints.step === 'orb' ? run.mark(this.hints.step) : run.ghost ? { k: 'ghost', x: run.ghost.x, y: run.ghost.y, r: run.orbR() } : null,
       hud: run.hud(touch, { watching: this.room.spectating || !run.myId, mates: this.net.mates(run), hint: hint?.text, hintA: hint?.a ?? 0 }),
       gauges: run.gauges(),
       timers: (run.me()?.mods?.eyes ?? 0) >= 3,
@@ -680,7 +680,7 @@ export class Game {
       dewStyle: this.profile.equip.dew,
       mist: w.weather.mist ? 0.8 : 0,
       dawn,
-      webAlpha: 1 - dawn * 0.5,
+      webAlpha: 1 - dawn * 0.3,
       spin: this.input.spinning ? this.input.spin : undefined,
     });
     this.drawLoupe(aim);

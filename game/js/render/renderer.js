@@ -86,7 +86,7 @@ export class Renderer {
     if (v.retreat !== false) drawRetreat(ctx, world, t, v.spiders, false);
     drawFireflies(ctx, world.lights, t, q);
     ctx.globalAlpha = v.webAlpha ?? 1;
-    drawWeb(ctx, world, { z: cam.z, t, q, silk: v.silk, dewStyle: v.dewStyle });
+    drawWeb(ctx, world, { z: cam.z, t, q, silk: v.silk, dewStyle: v.dewStyle, dawn: v.dawn ?? 0 });
     drawKnots(ctx, world, cam.z);
     ctx.globalAlpha = 1;
     // The living: prey on the web first, spiders, then fliers and hunters on top.
@@ -246,6 +246,19 @@ export class Renderer {
       ctx.fillStyle = rgba(AMBER, 0.9);
       ctx.beginPath();
       ctx.arc(m.x, m.y, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (m.k === 'ghost') {
+      // Where the torn web hung: a faint ring to tap, brighter as it breathes.
+      ctx.setLineDash([5 / z + 3, 9 / z + 3]);
+      ctx.lineDashOffset = t * 12;
+      ctx.strokeStyle = rgba(SILVER, 0.3 + 0.3 * pulse);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = rgba(SILVER, 0.5);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, 2.6, 0, Math.PI * 2);
       ctx.fill();
     } else {
       ctx.setLineDash([9 / z + 3, 7 / z + 3]);

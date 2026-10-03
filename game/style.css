@@ -605,6 +605,11 @@ button:focus-visible {
   height: 68px;
 }
 
+.sketch.web canvas {
+  width: 200px;
+  height: 130px;
+}
+
 .go {
   font-size: 20px;
   font-weight: 600;

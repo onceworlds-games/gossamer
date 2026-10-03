@@ -1,7 +1,7 @@
 // Teaching in the moment: the first night walks you through one web and one catch, and after that a short hint
 // appears the first few times something new happens. Five words at most; counts live in the save.
 import { platform } from './platform.js';
-import { T_FRAME, T_RADIAL } from '../sim/data.js';
+import { T_FRAME, T_RADIAL, REACH } from '../sim/data.js';
 
 const LIMIT = 3;
 
@@ -42,6 +42,7 @@ export class Hints {
     this.last = null;
     const me = run.me();
     if (this.step) this.show('t-move', this.touch() ? 'Walk with the stick' : 'Walk the branch: WASD', 99, true);
+    else if (me?.sp === 'orb') this.show('lanes', 'Build where it glows', 5);
     else if (me?.sp === 'jumper') this.show('jumper', 'Stalk, then pounce', 5);
     else if (me?.sp === 'bolas') this.show('bolas', 'Lure moths, swing the bolas', 5);
   }
@@ -70,6 +71,7 @@ export class Hints {
     }
     // Hints for later nights.
     if (e.k === 'waspspot' && mine) this.show('wasp', 'Wasp! Hide in leaves');
+    if (e.k === 'ghost' && mine) this.show('respin', this.touch() ? 'Torn. Tap the ring' : 'Torn. R spins it again', 5);
     if (e.k === 'wrenwarn') this.show('wren', 'Wren! Leave the shadow');
     if (e.k === 'refuse' && mine && e.why === 'silk') this.show('silk', 'Rest to spin more');
     if (e.k === 'refuse' && mine && e.why === 'full') this.show('full', 'Cut threads to recycle');
@@ -113,8 +115,10 @@ export class Hints {
     }
     if (this.step === 'go' && me) {
       const p = run.world.prey.find((q) => q.id === this.target);
-      if (p && Math.hypot(p.x - me.x, p.y - me.y) < 30) this.next(run, p.sp === 'fly' || p.sp === 'gnat' ? 'eat' : 'wrap');
+      if (p && Math.hypot(p.x - me.x, p.y - me.y) < REACH - 5) this.next(run, p.sp === 'fly' || p.sp === 'gnat' ? 'eat' : 'wrap');
     }
+    // Nothing is taught at dawn: the night is over.
+    if (run?.world?.done) this.until = 0;
     const on = this.text && this.t < this.until;
     this.a += ((on ? 1 : 0) - this.a) * 0.08;
     if (!on && this.a < 0.02) this.text = null;

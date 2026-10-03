@@ -24,7 +24,7 @@ one of three traits. Ten nights make a season.
 | W A S D / arrows | Stick | Walk along silk and branches; hold Down to lower yourself on a dragline |
 | Click | Tap | Cast a thread to the twig or thread under the pointer (a held finger shows a loupe) |
 | 1 2 3 4 | Thread button | Frame, radial, sticky, alarm silk |
-| 5 (again for the next pattern) | Thread button | Quick Orb: tap a spot and the whole web is spun there |
+| 5 (again for the next pattern), R | Thread button | Quick Orb: tap a spot and the whole web is spun there; R spins the last one again where it hung (after a wren, the torn web's place is ringed: tap it) |
 | E (hold / tap) | Wrap / Eat button | Wrap a catch, eat a cocoon, give silk to a friend, help a friend up |
 | F | Bite (hunter) | Bite: subdue a catch, fight a wasp (venom) |
 | Space (hold to charge) | Leap / Pounce | Leap toward the pointer, laying a dragline |

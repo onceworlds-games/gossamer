@@ -8,7 +8,8 @@ import { GARDENS, GARDEN_KEYS, SPECIES, UPGRADES, UPGRADE_KEYS, upgradeCost, TRA
 import { nightRules, makeScript } from '../sim/night.js';
 import { shopItems, buyItem, buyHatchling } from '../sim/profile.js';
 import { drawPrey } from '../render/creatures.js';
-import { spiderSketch, gardenSketch, upgradeGlyph, circleMark, tierDots, inkCanvas, stickerArt } from './ink.js';
+import { spiderSketch, gardenSketch, upgradeGlyph, circleMark, tierDots, inkCanvas, stickerArt, webSketch } from './ink.js';
+import { decodeSketch } from '../sim/sketch.js';
 
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 const say = (n) => (n <= 12 ? WORDS[n] : String(n));
@@ -122,7 +123,7 @@ export class Notebook {
     st.textContent = last.met ? 'Fed' : 'Hungry';
     const line = note(naturalist(last, res.t));
     line.prepend(st, ' ');
-    col.append(line, sketches(res.t.eaten));
+    col.append(line, sketches(res.t.eaten, decodeSketch(res.sk)));
     if (last.quota > 0) col.append(margin(`${last.food} of ${last.quota}`));
     const mine = res.out?.moult?.[this.game.me];
     if (mine) col.append(margin(`+${mine} moult`));
@@ -332,8 +333,15 @@ export function naturalist(h, t) {
   return bits.join(' ');
 }
 
-function sketches(eaten) {
+function sketches(eaten, web) {
   const box = div('sketches');
+  // The night's web, drawn from what hung there at dawn.
+  if (web) {
+    const s = div('sketch web');
+    s.setAttribute('aria-hidden', 'true');
+    s.append(webSketch(web), document.createTextNode('My web'));
+    box.append(s);
+  }
   for (const [k, n] of Object.entries(eaten ?? {})) {
     if (!n || !PREY[k]) continue;
     const s = div('sketch');

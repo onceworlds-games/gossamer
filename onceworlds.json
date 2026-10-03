@@ -11,7 +11,7 @@
     { "keys": ["W", "A", "S", "D"], "action": "Walk the silk; hold S to drop on a line" },
     { "keys": ["Click"], "action": "Cast a thread to a twig or thread" },
     { "keys": ["1", "2", "3", "4"], "action": "Frame, radial, sticky, alarm silk" },
-    { "keys": ["5"], "action": "Quick Orb: click to spin a whole web" },
+    { "keys": ["5", "R"], "action": "Quick Orb; R spins the last again" },
     { "keys": ["E"], "action": "Hold to wrap prey, tap to eat" },
     { "keys": ["F"], "action": "Bite" },
     { "keys": ["Space"], "action": "Leap (hold to charge: hunter)" },

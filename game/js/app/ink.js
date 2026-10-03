@@ -383,3 +383,29 @@ export function tierDots(tier) {
 }
 
 export { PEN, RUST };
+
+/**
+ * The night's web as a field sketch: frames heavy, radials plain, glue lines fine and dotted, drawn with the pen's wobble.
+ * `sk` is what decodeSketch() returns.
+ */
+export function webSketch(sk, w = 200, h = 130) {
+  return inkCanvas(w, h, (c) => {
+    const pad = 8;
+    const k = Math.min((w - pad * 2) / Math.max(1, sk.w), (h - pad * 2) / Math.max(1, sk.h));
+    const ox = (w - sk.w * k) / 2;
+    const oy = (h - sk.h * k) / 2;
+    const pt = (x, y) => [ox + x * k, oy + y * k];
+    const WIDTH = [1.7, 1.1, 0.7, 0.8];
+    // Frames and radials under the glue, so the spiral reads across them.
+    for (const order of [[0, 1, 3], [2]]) {
+      for (const q of sk.segs) {
+        if (!order.includes(q.t)) continue;
+        c.globalAlpha = q.t === 2 ? 0.8 : 1;
+        if (q.t === 3) c.setLineDash([3, 3]);
+        pen(c, [pt(q.x0, q.y0), pt(q.x1, q.y1)], WIDTH[q.t], q.x0 + q.y1);
+        if (q.t === 3) c.setLineDash([]);
+      }
+    }
+    c.globalAlpha = 1;
+  });
+}

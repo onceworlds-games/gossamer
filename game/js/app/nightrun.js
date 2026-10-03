@@ -7,6 +7,7 @@ import { resolveTarget, useTarget, threadCost, catchOnBranch, snapRadiusFor } fr
 import { planOrb, patternsFor } from '../sim/quickorb.js';
 import { pulseFrom, clearPulses } from '../render/webart.js';
 import * as fx from '../render/fx.js';
+import { encodeSketch } from '../sim/sketch.js';
 import { TYPES } from '../render/hud.js';
 
 const TYPE_TO_THREAD = [0, 1, 2, 3];
@@ -30,6 +31,9 @@ export class NightRun {
     this.edges = [];
     this.t = 0;
     this.touch = false; // the player is on a touch screen (set each frame by the page)
+    this.lastOrb = null; // the last Quick Orb this spider spun: { x, y, p, n0 }
+    this.ghost = null; // the lost web's place, offered for a quick respin
+    this.peak = { n: 0, sk: '', t: 0 }; // the fullest the web got, as a sketch for the notebook (host)
     this.useOn = false;
     this.ctxLabel = 'Act';
     this.lastSilk = 0;
@@ -80,10 +84,15 @@ export class NightRun {
           this.setType((this.type + 1) % 5);
           if (this.type === 4) this.pattern = 'orb';
           break;
+        case 'respin':
+          this.respin(me);
+          break;
         case 'tap': {
           const p = toWorld(e.sx, e.sy);
           if (me.sp === 'orb') {
-            if (this.type === 4) this.command({ t: 'orb', x: p.x, y: p.y, r: this.orbR(p), p: this.pattern ?? 'orb' });
+            // A tap on the ring of a web that was torn down puts the new one exactly where the old one hung.
+            if (this.type === 4 && this.ghost && Math.hypot(p.x - this.ghost.x, p.y - this.ghost.y) < 100) this.command({ t: 'orb', x: this.ghost.x, y: this.ghost.y, r: this.orbR(p), p: this.ghost.p });
+            else if (this.type === 4) this.command({ t: 'orb', x: p.x, y: p.y, r: this.orbR(p), p: this.pattern ?? 'orb' });
             else this.command({ t: 'cast', type: TYPE_TO_THREAD[this.type], x: p.x, y: p.y, sr: this.snapR() });
           } else if (me.sp === 'jumper') {
             const d = Math.hypot(p.x - me.x, p.y - me.y);
@@ -129,6 +138,61 @@ export class NightRun {
           break;
       }
     }
+  }
+
+  /** Spins the last Quick Orb again where it hung (the R key). */
+  respin(me) {
+    const o = this.lastOrb;
+    if (!o || me.sp !== 'orb') return;
+    this.command({ t: 'orb', x: o.x, y: o.y, r: this.orbR(o), p: patternsFor(me.mods.templates).includes(o.p) ? o.p : 'orb' });
+  }
+
+  /** How much silk this spider has hung round a hub: radial and sticky threads with their middle near it. */
+  silkAround(o) {
+    const web = this.world.web;
+    let n = 0;
+    for (let s = 0; s < web.threadHigh; s++) {
+      if (web.tid[s] < 0 || (web.type[s] !== 1 && web.type[s] !== 2)) continue;
+      const mx = (web.x[web.ta[s]] + web.x[web.tb[s]]) / 2;
+      const my = (web.y[web.ta[s]] + web.y[web.tb[s]]) / 2;
+      if (Math.hypot(mx - o.x, my - o.y) < 135) n++;
+    }
+    return n;
+  }
+
+  /** Once the wren (or a wasp, or the wind) has taken most of the last orb, offer it back: ring it, and hold the orb. */
+  watchLastOrb(dt, me) {
+    const o = this.lastOrb;
+    if (!o || !o.n0 || !me || me.mode === 'downed' || this.world.phase === 'dawn') return;
+    this.watchT = (this.watchT ?? 0) - dt;
+    if (this.watchT > 0 || me.act?.k === 'orb') return;
+    this.watchT = 0.5;
+    const left = this.silkAround(o);
+    if (!this.ghost && left < o.n0 * 0.4) {
+      this.ghost = o;
+      this.pickOrb();
+      this.onEvent?.({ k: 'ghost', id: me.id, x: o.x, y: o.y });
+    } else if (this.ghost && left > o.n0 * 0.7) this.ghost = null;
+  }
+
+  /** Every few seconds, remember the web if it is the fullest so far: the notebook draws it, not what a wren left. */
+  notePeak(dt) {
+    this.peak.t -= dt;
+    if (this.peak.t > 0) return;
+    this.peak.t = 4;
+    const n = this.world.web.playerThreads;
+    if (n < 12 || n <= this.peak.n * 1.1) return;
+    const sk = encodeSketch(this.world.web);
+    if (sk) {
+      this.peak.n = n;
+      this.peak.sk = sk;
+    }
+  }
+
+  /** The sketch for the result: the fullest web, unless the one hanging now is nearly as full. */
+  sketch() {
+    const now = this.world.web.playerThreads;
+    return this.peak.sk && this.peak.n > now * 1.25 ? this.peak.sk : encodeSketch(this.world.web);
   }
 
   /** The next Quick Orb pattern this spider has; false if it was the last one (so a cycle moves on). */
@@ -254,6 +318,8 @@ export class NightRun {
     // Far behind (a stall, a hidden tab): let the time go rather than race to catch up.
     if (this.acc > DT * 30) this.acc = 0;
     this.react();
+    this.watchLastOrb(dt, me);
+    if (this.role === 'host') this.notePeak(dt);
     for (const p of this.pings) p.age += dt;
     this.pings = this.pings.filter((p) => p.age < 3);
     return ticks;
@@ -351,8 +417,15 @@ export class NightRun {
         case 'alarm':
           this.alarms.push({ x: e.x, y: e.y, until: this.t + 2.5 });
           break;
+        case 'orbstart':
+          if (mine) {
+            this.lastOrb = { x: e.hx ?? e.x, y: e.hy ?? e.y, p: e.pattern ?? 'orb', n0: 0 };
+            this.ghost = null;
+          }
+          break;
         case 'orbdone':
           if (mine && !e.partial) this.note(e.quick ? 'Spun' : 'Orb complete', e.x, e.y - 50, '#e6eee8');
+          if (mine && e.quick && this.lastOrb) this.lastOrb.n0 = this.silkAround(this.lastOrb);
           break;
         case 'perfect':
           if (mine) this.note('Perfect radials', e.x, e.y - 60, '#f0a33c');

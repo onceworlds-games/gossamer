@@ -112,6 +112,9 @@ export class Input {
         case 'q':
           this.events.push({ t: 'shake' });
           break;
+        case 'r':
+          this.events.push({ t: 'respin' });
+          break;
         case 'l':
           this.events.push({ t: 'lure' });
           break;
