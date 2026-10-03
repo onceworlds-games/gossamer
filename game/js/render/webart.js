@@ -5,24 +5,40 @@ import { T_FRAME, T_RADIAL, T_STICKY, T_ALARM, T_DRAG, T_SURFACE, THREADS, N_PRE
 import { SILVER, AMBER, RUST, rgba, SILKS } from './palette.js';
 
 const ALPHA = [0.78, 0.62, 0.86, 0.7, 0.5];
-let bead = null;
 const pulses = [];
 
-function beadSprite() {
-  if (bead) return bead;
-  bead = document.createElement('canvas');
-  bead.width = bead.height = 32;
-  const g = bead.getContext('2d');
+/** Dew bead sprites by style: round beads, starred ones with a glint, or prisms that split the moonlight. */
+const beads = {};
+function beadSprite(style = 'round', k = 0) {
+  const key = style === 'prism' ? `prism${k % 6}` : style;
+  if (beads[key]) return beads[key];
+  const c = document.createElement('canvas');
+  c.width = c.height = 32;
+  const g = c.getContext('2d');
+  const tint = style === 'prism' ? [[255, 170, 170], [255, 214, 150], [235, 245, 160], [160, 235, 190], [160, 205, 255], [205, 175, 255]][k % 6] : [200, 226, 222];
   const grad = g.createRadialGradient(13, 12, 1, 16, 16, 15);
   grad.addColorStop(0, 'rgba(255,255,255,0.95)');
-  grad.addColorStop(0.35, 'rgba(200,226,222,0.55)');
-  grad.addColorStop(0.9, 'rgba(120,170,165,0.28)');
+  grad.addColorStop(0.35, `rgba(${tint[0]},${tint[1]},${tint[2]},0.55)`);
+  grad.addColorStop(0.9, `rgba(${Math.round(tint[0] * 0.6)},${Math.round(tint[1] * 0.75)},${Math.round(tint[2] * 0.75)},0.28)`);
   grad.addColorStop(1, 'rgba(120,170,165,0)');
   g.fillStyle = grad;
   g.beginPath();
-  g.arc(16, 16, 15, 0, Math.PI * 2);
+  g.arc(16, 16, style === 'star' ? 11 : 15, 0, Math.PI * 2);
   g.fill();
-  return bead;
+  if (style === 'star') {
+    // A four-pointed glint across the bead.
+    g.strokeStyle = 'rgba(255,255,255,0.8)';
+    g.lineWidth = 1.4;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(16, 1.5);
+    g.lineTo(16, 30.5);
+    g.moveTo(1.5, 16);
+    g.lineTo(30.5, 16);
+    g.stroke();
+  }
+  beads[key] = c;
+  return c;
 }
 
 /** A touch at thread `id` sends brightness out along the web (a few hops, each a little later and dimmer). */
@@ -152,7 +168,8 @@ export function drawWeb(ctx, world, o) {
   ctx.globalCompositeOperation = 'source-over';
   // Dew beads at fixed places along each thread, swelling as the night goes on.
   if (o.q !== 'low') {
-    const sprite = beadSprite();
+    const style = o.dewStyle === 'star' || o.dewStyle === 'prism' ? o.dewStyle : 'round';
+    let sprite = beadSprite(style);
     let budget = o.q === 'high' ? 2200 : 700;
     for (let s = 0; s < web.threadHigh && budget > 0; s++) {
       if (web.tid[s] < 0 || web.type[s] === T_SURFACE) continue;
@@ -161,7 +178,7 @@ export function drawWeb(ctx, world, o) {
       const n = Math.min(40, Math.floor(dew));
       const a = web.ta[s];
       const b = web.tb[s];
-      const size = Math.min(4.2, 1.2 + dew / Math.max(8, web.len[s] / 6)) * (o.dewStyle === 'star' ? 1.2 : 1);
+      const size = Math.min(4.2, 1.2 + dew / Math.max(8, web.len[s] / 6)) * (style === 'star' ? 1.35 : 1);
       let h = (web.tid[s] * 2654435761) >>> 0;
       for (let k = 0; k < n && budget > 0; k++, budget--) {
         h = (h * 1103515245 + 12345) >>> 0;
@@ -169,6 +186,7 @@ export function drawWeb(ctx, world, o) {
         const x = web.x[a] + (web.x[b] - web.x[a]) * f;
         const y = web.y[a] + (web.y[b] - web.y[a]) * f + size * 0.4;
         const sz = size * (0.6 + ((h >>> 20) & 7) / 14);
+        if (style === 'prism') sprite = beadSprite(style, (h >>> 4) % 6);
         ctx.drawImage(sprite, x - sz, y - sz, sz * 2, sz * 2);
       }
     }
