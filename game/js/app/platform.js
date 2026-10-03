@@ -151,10 +151,12 @@ const memSave = new Map();
 export const platform = {
   onPlatform,
   sdk,
+  /** Joins the room. On the platform a refused or failed join throws (the game says so and offers another go); with no SDK (opened on its own) it is a room of one. */
   async join(opts) {
     if (sdk?.rooms?.join) {
-      const room = await safeAsync(() => sdk.rooms.join(opts), null);
-      if (room) return room;
+      const room = await sdk.rooms.join(opts);
+      if (!room) throw new Error('no room');
+      return room;
     }
     return new LocalRoom(opts);
   },
