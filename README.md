@@ -92,7 +92,12 @@ npm test           # unit, property and fuzz tests
 npm run balance    # the balance harness (bots across seeds), about five minutes (ORB_SPACING=20 tries another spiral)
 npm run feel       # how building feels in numbers: aim accuracy, caps, silk, a web by hand against a Quick Orb
 npm run store      # recapture store/ from the game's own poster scenes
+npm run smoke      # the first night, played with real keys and clicks in headless Chrome
 ```
+
+A test page exposes the game as `window.__gossamer` when opened with `?test` (or `?test=bot` for an autopilot night, with
+`night=7&garden=reed&sp=jumper` to start further on); a harness running inside the Onceworlds frame sets
+`window.__gossamerTest = true` for the same.
 
 To try it with friends locally, deploy it to a local Onceworlds platform and open the play page in several windows
 (`node scripts/coop.mjs` runs three guests through a night). Fonts (EB Garamond, Cedarville Cursive) are bundled
