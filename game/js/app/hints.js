@@ -86,10 +86,12 @@ export class Hints {
 
   next(run, step) {
     this.step = step;
+    // The Quick Orb is picked for you: on a phone it is five taps of the thread button away.
+    if (step === 'orb') run.pickOrb();
     const touch = this.touch();
     const text = {
-      cast: touch ? 'Tap a far twig' : 'Click a far twig',
-      orb: touch ? 'Thread: Orb. Tap between' : 'Press 5, click between',
+      cast: touch ? 'Tap the glowing twig' : 'Click the glowing twig',
+      orb: touch ? 'Orb ready: tap the ring' : 'Orb ready: click the ring',
       wait: 'Now wait. Feel it',
       go: 'Something landed. Go!',
       wrap: touch ? 'Hold Wrap' : 'Hold E to wrap',

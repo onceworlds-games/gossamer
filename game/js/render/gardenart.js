@@ -2,7 +2,7 @@
 // flowers at their tips, the hedge masses that hide a spider, and each garden's own props.
 import { W, H, GROUND } from '../sim/data.js';
 import { makeRng, range, rand } from '../sim/rng.js';
-import { retreatNode } from '../sim/garden.js';
+import { retreatNode, lanePoint } from '../sim/garden.js';
 import { INK, TEAL, LEAF, SILVER, AMBER, RUST, BRANCH, BRANCH_RIM, rgba } from './palette.js';
 import { glowSprite, scallop } from './backdrop.js';
 
@@ -468,3 +468,68 @@ export function drawGround(ctx, world, t, q) {
 }
 
 export { INK, TEAL, LEAF };
+
+// ---------------------------------------------------------------- the flight lanes, faintly
+const lp = {};
+
+/**
+ * Where the visitors fly, shown the way pollen shows a draught: a pale haze along each lane and motes drifting the
+ * way the visitors go. Strongest at dusk (that's when you choose where to build), thinning through the night; the
+ * busy lane is the brightest. `still` (reduced motion) keeps the motes where they are.
+ */
+export function drawLanes(ctx, world, t, q, strength, still) {
+  if (strength <= 0.02) return;
+  const glow = glowSprite();
+  const lanes = world.garden.lanes;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let li = 0; li < lanes.length; li++) {
+    const lane = lanes[li];
+    const share = Math.min(1, lane.share / 0.6);
+    const a = strength * (0.35 + 0.65 * share);
+    ctx.beginPath();
+    lanePoint(lane, 0, lp);
+    ctx.moveTo(lp.x, lp.y);
+    for (let u = 0.04; u <= 1.0001; u += 0.04) {
+      lanePoint(lane, u, lp);
+      ctx.lineTo(lp.x, lp.y);
+    }
+    for (const [wf, al] of [[1.9, 0.016], [1.5, 0.016], [1.15, 0.018], [0.8, 0.018], [0.45, 0.02]]) {
+      ctx.lineWidth = lane.w * wf;
+      ctx.strokeStyle = `rgba(214, 232, 230, ${al * a})`;
+      ctx.stroke();
+    }
+    const n = Math.round((7 + share * 14) * (q === 'low' ? 0.55 : 1));
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < n; i++) {
+      const h = Math.sin(i * 12.9898 + li * 78.233) * 43758.5453;
+      const r1 = h - Math.floor(h);
+      const u = still ? (i + 0.5) / n : (t * (0.034 + 0.02 * r1) + i / n + li * 0.31) % 1;
+      lanePoint(lane, u, lp);
+      const off = (r1 - 0.5) * lane.w * 0.9 + (still ? 0 : Math.sin(t * 0.8 + i * 1.7) * 7);
+      const x = lp.x - lp.dy * off;
+      const y = lp.y + lp.dx * off + (still ? 0 : Math.cos(t * 0.6 + i) * 4);
+      const fade = Math.sin(u * Math.PI);
+      const tw = 0.55 + 0.45 * Math.sin(t * (1.2 + r1) + i * 2.1);
+      ctx.globalAlpha = Math.min(1, fade * tw * a * 0.9);
+      if (q !== 'low') ctx.drawImage(glow, x - 11, y - 11, 22, 22);
+      ctx.fillStyle = '#dcece8';
+      ctx.beginPath();
+      ctx.arc(x, y, 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+}
+
+/** How strongly the lanes show: full while you build at dusk, thinning after, never quite gone on the early nights. */
+export function laneStrength(world) {
+  if (world.phase === 'dawn' || world.done) return 0;
+  const tutorial = world.mode === 'tutorial';
+  const floor = tutorial ? 0.9 : Math.max(0.3, 1.1 - world.night * 0.16);
+  const into = world.t - world.dusk;
+  if (into <= 0) return 1;
+  const hold = tutorial ? 90 : 12;
+  return floor + (1 - floor) * Math.max(0, 1 - Math.max(0, into - hold) / 25);
+}

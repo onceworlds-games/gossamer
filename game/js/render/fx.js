@@ -163,7 +163,9 @@ export function drawFx(ctx, z) {
     switch (p.kind) {
       case DEW:
         ctx.fillStyle = rgba(SILVER, 0.8 * a);
-        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 0.62, 0, Math.PI * 2);
+        ctx.fill();
         break;
       case SILK:
         ctx.strokeStyle = rgba(SILVER, 0.35 * a);
@@ -175,7 +177,9 @@ export function drawFx(ctx, z) {
         break;
       case SPARK:
         ctx.fillStyle = rgba(AMBER, a);
-        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 0.7, 0, Math.PI * 2);
+        ctx.fill();
         break;
       case LEAF:
       case FEATHER:
@@ -198,7 +202,9 @@ export function drawFx(ctx, z) {
         break;
       case DUST:
         ctx.fillStyle = `rgba(120, 140, 130, ${0.4 * a})`;
-        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 0.6, 0, Math.PI * 2);
+        ctx.fill();
         break;
       default:
         break;

@@ -39,7 +39,7 @@ export class Camera {
   }
 
   /** focus: { x, y, vx, vy }, box: silk bounds { x0, y0, x1, y1 } or null. */
-  update(dt, focus, box, reduced, snap = false) {
+  update(dt, focus, box, reduced, snap = false, open = false) {
     this.t += dt;
     const short = Math.min(this.sw, this.sh);
     const long = Math.max(this.sw, this.sh);
@@ -50,6 +50,8 @@ export class Camera {
       const span = Math.max(box.x1 - box.x0, box.y1 - box.y0) + 150;
       view = Math.max(view, Math.min(1000, span * (short / long < 0.7 ? 1.05 : 1)));
     }
+    // Nothing spun yet (the first dusk, or a wren took the lot): show more of the garden, so there is something to aim at.
+    if (open && !box) view = Math.max(view, short < 520 ? 540 : 680);
     view /= this.user;
     view = Math.max(240, Math.min(1100, view));
     this.view += (view - this.view) * Math.min(1, dt * (snap ? 60 : 1.6));

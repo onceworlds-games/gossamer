@@ -1,10 +1,10 @@
 // Puts a frame together: backdrop, garden, silk, the living, effects, weather and the HUD, through one camera.
 import { Camera } from './camera.js';
 import { makeBackdrop, drawBackdrop, drawMist, drawFinish, drawFront } from './backdrop.js';
-import { makeGardenArt, drawGardenBack, drawSurfaces, drawDecor, drawGround, drawRetreat } from './gardenart.js';
+import { makeGardenArt, drawGardenBack, drawSurfaces, drawDecor, drawGround, drawRetreat, drawLanes, laneStrength } from './gardenart.js';
 import { drawWeb, drawKnots, drawAim } from './webart.js';
 import { drawSpider, drawPrey, drawWasp, drawWren, drawMantis, drawFireflies, drawLures } from './creatures.js';
-import { drawFx, updateFx, rain as rainFx } from './fx.js';
+import { drawFx, updateFx, rain as rainFx, setFxScale } from './fx.js';
 import { drawHud } from './hud.js';
 import { SILVER, AMBER, RUST, rgba } from './palette.js';
 import { anchorPos } from '../sim/spider.js';
@@ -69,7 +69,8 @@ export class Renderer {
       this.art = makeGardenArt(world.garden);
       this.bdKey = key;
     }
-    if (v.focus) cam.update(v.dt, v.focus, v.box === undefined ? this.silkBox(world) : v.box, v.reduced, v.snap);
+    setFxScale(v.reduced ? 0.3 : q === 'low' ? 0.5 : q === 'medium' ? 0.8 : 1);
+    if (v.focus) cam.update(v.dt, v.focus, v.box === undefined ? this.silkBox(world) : v.box, v.reduced, v.snap, !!v.hud);
     const view = this.view;
     view.x0 = cam.x - cam.sw / 2 / cam.z;
     view.x1 = cam.x + cam.sw / 2 / cam.z;
@@ -81,6 +82,7 @@ export class Renderer {
     drawGardenBack(ctx, world, this.art, t, q);
     drawSurfaces(ctx, world, cam.z, q);
     drawDecor(ctx, world, t, q);
+    if (v.lanes !== false && v.hud) drawLanes(ctx, world, t, q, laneStrength(world) * (v.lanes ?? 1), v.reduced);
     if (v.retreat !== false) drawRetreat(ctx, world, t, v.spiders, false);
     drawFireflies(ctx, world.lights, t, q);
     ctx.globalAlpha = v.webAlpha ?? 1;
@@ -116,6 +118,7 @@ export class Renderer {
       this.rainAcc -= n;
       rainFx(view, n);
     }
+    if (v.mark) this.mark(ctx, v.mark, t);
     drawAim(ctx, v.aim, cam.z, t);
     if (q !== 'low') drawFront(ctx, this.bd, cam, pr);
     drawMist(ctx, cam, pr, t, v.mist ?? 0, q);
@@ -224,6 +227,42 @@ export class Renderer {
       ctx.stroke();
     }
     void t;
+  }
+
+  /** The first night's pointers: a ring on a twig worth a thread, a wider one where the first web should go. */
+  mark(ctx, m, t) {
+    const z = this.cam.z;
+    const pulse = 0.5 + 0.5 * Math.sin(t * 3.2);
+    ctx.lineWidth = Math.max(1.6 / z, 1.6);
+    ctx.strokeStyle = rgba(AMBER, 0.45 + 0.4 * pulse);
+    if (m.k === 'twig') {
+      for (let k = 0; k < 2; k++) {
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 10 + ((t * 18 + k * 9) % 18), 0, Math.PI * 2);
+        ctx.globalAlpha = 1 - ((t * 18 + k * 9) % 18) / 18;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = rgba(AMBER, 0.9);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.setLineDash([9 / z + 3, 7 / z + 3]);
+      ctx.lineDashOffset = -t * 14;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = rgba(AMBER, 0.035 + 0.035 * pulse);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(AMBER, 0.9);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   ping(ctx, p, t) {

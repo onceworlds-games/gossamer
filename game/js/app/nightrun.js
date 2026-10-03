@@ -3,7 +3,7 @@
 import { DT, PREY, T_STICKY, SPECIES, W, GROUND } from '../sim/data.js';
 import { createWorld, stepWorld, spiderById, timeLeft } from '../sim/world.js';
 import { moveSpider, upkeep, anchorPos } from '../sim/spider.js';
-import { resolveTarget, useTarget, threadCost, catchOnBranch } from '../sim/actions.js';
+import { resolveTarget, useTarget, threadCost, catchOnBranch, snapRadiusFor } from '../sim/actions.js';
 import { planOrb, patternsFor } from '../sim/quickorb.js';
 import { pulseFrom, clearPulses } from '../render/webart.js';
 import * as fx from '../render/fx.js';
@@ -83,7 +83,7 @@ export class NightRun {
           const p = toWorld(e.sx, e.sy);
           if (me.sp === 'orb') {
             if (this.type === 4) this.command({ t: 'orb', x: p.x, y: p.y, r: this.orbR(p), p: this.pattern ?? 'orb' });
-            else this.command({ t: 'cast', type: TYPE_TO_THREAD[this.type], x: p.x, y: p.y });
+            else this.command({ t: 'cast', type: TYPE_TO_THREAD[this.type], x: p.x, y: p.y, sr: this.snapR() });
           } else if (me.sp === 'jumper') {
             const d = Math.hypot(p.x - me.x, p.y - me.y);
             this.leap(p.x, p.y, Math.min(1, d / me.mods.leap + 0.1));
@@ -92,7 +92,7 @@ export class NightRun {
         }
         case 'padcast': {
           const p = { x: me.x + Math.cos(me.facing) * 160, y: me.y + Math.sin(me.facing) * 160 };
-          this.command({ t: 'cast', type: TYPE_TO_THREAD[Math.min(3, this.type)], x: p.x, y: p.y });
+          this.command({ t: 'cast', type: TYPE_TO_THREAD[Math.min(3, this.type)], x: p.x, y: p.y, sr: this.snapR() });
           break;
         }
         case 'leap': {
@@ -144,6 +144,55 @@ export class NightRun {
     if (n === this.type) return;
     this.type = n;
     this.audio?.ui('type');
+  }
+
+  /** The Quick Orb in hand, in its plain pattern. */
+  pickOrb() {
+    if (this.me()?.sp !== 'orb') return;
+    this.pattern = 'orb';
+    this.setType(4);
+  }
+
+  /**
+   * The first night points at things: a twig worth throwing a thread to, then the spot for the first web (on the
+   * lane the visitors fly). Chosen once per step, so the mark doesn't wander.
+   */
+  mark(step) {
+    const me = this.me();
+    if (!me || (step !== 'cast' && step !== 'orb')) return null;
+    if (this.markFor !== step) {
+      this.markFor = step;
+      this.markVal = null;
+    }
+    if (this.markVal) return this.markVal;
+    const w = this.world;
+    const web = w.web;
+    if (step === 'cast') {
+      let best = null;
+      for (let s = 0; s < web.nodeHigh; s++) {
+        if (web.nid[s] < 0 || web.nid[s] >= 2000 || web.kind[s] !== 0 || web.adj[s].length === 0) continue;
+        const d = Math.hypot(web.x[s] - me.x, web.y[s] - me.y);
+        if (d < 150 || d > 380 || web.y[s] > GROUND - 120) continue;
+        const score = Math.abs(d - 250) + (web.y[s] > me.y + 80 ? 60 : 0);
+        if (!best || score < best.score) best = { k: 'twig', x: web.x[s], y: web.y[s], score };
+      }
+      this.markVal = best;
+    } else {
+      const sites = w.garden.sites.filter((s) => s.lane === 0);
+      let best = null;
+      for (const s of sites.length ? sites : w.garden.sites) {
+        const d = Math.hypot(s.x - me.x, s.y - me.y);
+        const score = d + (d > me.mods.range - 60 ? 400 : 0);
+        if (!best || score < best.score) best = { k: 'site', x: s.x, y: s.y, r: this.orbR(s), score };
+      }
+      this.markVal = best;
+    }
+    return this.markVal;
+  }
+
+  /** The pointer's reach for a cast, in world px (wider when zoomed out, so a thumb still lands on a twig). */
+  snapR() {
+    return snapRadiusFor(this.renderer?.cam.z ?? 1);
   }
 
   orbR(p) {
@@ -362,7 +411,6 @@ export class NightRun {
     const w = this.world;
     if (me.sp === 'orb') {
       if (this.type === 4) {
-        if (!active && !this.hoverOrb) return null;
         const key = `${Math.round(p.x / 6)}:${Math.round(p.y / 6)}`;
         if (this.orbKey !== key || w.tick - (this.orbTick ?? 0) > 20) {
           this.orbKey = key;
@@ -372,7 +420,7 @@ export class NightRun {
         const far = Math.hypot(p.x - me.x, p.y - me.y) > me.mods.range;
         return { kind: 'orb', x1: p.x, y1: p.y, r: this.orbR(p), plan: far ? { ...this.orbPlan, ok: false } : this.orbPlan };
       }
-      const found = resolveTarget(w, me, p.x, p.y);
+      const found = resolveTarget(w, me, p.x, p.y, this.snapR());
       if (!found) return active ? { kind: 'cast', x0: me.x, y0: me.y, x1: p.x, y1: p.y, ok: false, range: me.mods.range } : null;
       const tgt = catchOnBranch(w, me, found);
       const len = Math.hypot(tgt.x - me.x, tgt.y - me.y);

@@ -158,6 +158,28 @@ button:focus-visible {
   transform: translateY(1px) scale(0.98);
 }
 
+/* Held upright, the orb hangs above and the name sits under it. */
+@media (max-aspect-ratio: 11/10) {
+  .title {
+    justify-content: flex-end;
+    padding-bottom: calc(11vh + var(--safe-b));
+  }
+}
+
+/* On a wide screen the orb hangs on the left and the name sits beside it, not over it. */
+@media (min-aspect-ratio: 11/10) {
+  .title {
+    align-items: flex-start;
+    padding-left: 56vw;
+    padding-right: 4vw;
+  }
+
+  .title h1 {
+    font-size: clamp(56px, 8.6vw, 128px);
+    line-height: 1.05;
+  }
+}
+
 @keyframes rise {
   from {
     opacity: 0;
@@ -645,6 +667,71 @@ button:focus-visible {
   font-weight: 400;
   font-style: italic;
   font-size: 30px;
+}
+
+.join {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100px + var(--safe-b));
+  transform: translateX(-50%);
+  max-width: calc(100vw - 24px);
+  padding: 10px 14px 12px;
+  text-align: center;
+  background: var(--paper);
+  color: var(--pen);
+  border-radius: 3px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  animation: rise 0.5s ease-out both;
+}
+
+.join .jlabel {
+  font-variant: small-caps;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  font-size: 17px;
+  color: #5a4a36;
+  margin-bottom: 4px;
+}
+
+.join .jrow {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.join .jbtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 6px 6px;
+  min-width: 100px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-family: var(--hand);
+  font-size: 19px;
+  line-height: 1.1;
+  color: #2c3f5c;
+}
+
+.join .jbtn canvas {
+  transition: transform 0.15s ease;
+}
+
+.join .jbtn:not(:disabled):hover canvas {
+  transform: translateY(-2px);
+}
+
+.join .jbtn:not(:disabled):active {
+  background: rgba(240, 163, 60, 0.18);
+}
+
+.join .jbtn.on {
+  border-color: var(--rust);
+}
+
+.join .jbtn:disabled:not(.on) {
+  opacity: 0.4;
 }
 
 .tag {

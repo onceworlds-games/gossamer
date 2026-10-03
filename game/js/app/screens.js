@@ -2,6 +2,8 @@
 // the room closes. Everything players type or name is set with textContent.
 import { onPlatform } from './platform.js';
 import { Notebook } from './notebook.js';
+import { spiderSketch } from './ink.js';
+import { SPECIES } from '../sim/data.js';
 
 export class Screens {
   constructor(root, game) {
@@ -16,6 +18,8 @@ export class Screens {
     this.root.replaceChildren();
     this.el = null;
     this.zoomEl = null;
+    this.joinEl = null;
+    this.joinKey = '';
     this.mode = null;
   }
 
@@ -75,6 +79,34 @@ export class Screens {
 
   frame(dt) {
     if (this.mode === 'book') this.notebook.frame(dt);
+  }
+
+  /**
+   * A friend arriving at dusk picks a spider to join the night with (the host lets them in). `kinds`: species they own;
+   * `picked`: the one asked for, or null. Pass kinds = null to take the card away.
+   */
+  join(kinds, picked, onPick) {
+    const key = kinds ? `${kinds.join()}|${picked ?? ''}` : '';
+    if (key === this.joinKey) return;
+    this.joinKey = key;
+    this.joinEl?.remove();
+    this.joinEl = null;
+    if (!kinds) return;
+    const card = div('join');
+    card.append(div('jlabel', picked ? 'Joining' : 'Join tonight'));
+    const row = div('jrow');
+    for (const k of kinds) {
+      const b = button(`jbtn${picked === k ? ' on' : ''}`, '', () => onPick(k));
+      b.disabled = !!picked;
+      b.append(spiderSketch(k));
+      const n = document.createElement('span');
+      n.textContent = SPECIES[k]?.name ?? k;
+      b.append(n);
+      row.append(b);
+    }
+    card.append(row);
+    this.root.append(card);
+    this.joinEl = card;
   }
 
   /** On touch screens, two small buttons zoom (the frame doesn't allow pinching). */

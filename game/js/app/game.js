@@ -14,7 +14,7 @@ import { newSeason, parseSeason, ensureRoster, applyNight, buy, pickTrait, setSp
 import { parseProfile, recordNight, recordSeason, checkUnlocks } from '../sim/profile.js';
 import { tally } from '../sim/night.js';
 import { packWorld, unpackWorld } from '../sim/codec.js';
-import { SPECIES, GARDENS, TRAITS, T_SURFACE } from '../sim/data.js';
+import { SPECIES, SPECIES_KEYS, GARDENS, TRAITS, T_SURFACE } from '../sim/data.js';
 
 const DAWN_HOLD = 4.5;
 
@@ -373,7 +373,13 @@ export class Game {
     this.net.startHosting(this.run);
     this.audio.night(this.run.world);
     this.hints.nightStart(this.run, s);
+    this.handIn(this.run);
     this.botFor(this.run);
+  }
+
+  /** Someone who spins orbs most nights starts with the Quick Orb in hand (on a phone, that is four taps saved). */
+  handIn(run) {
+    if (this.profile.tutorial && this.profile.stats.orbs >= 3 && !this.test) run.pickOrb();
   }
 
   /** ?test=bot: a bot plays our own spider (for smoke tests that need a lively night). */
@@ -392,6 +398,7 @@ export class Game {
     this.room.setState('night', { ...rec, by: this.me });
     this.net.startHosting(this.run);
     this.audio.night(this.run.world);
+    this.handIn(this.run);
     this.botFor(this.run);
   }
 
@@ -402,6 +409,7 @@ export class Game {
     if (ck) unpackWorld(this.run.world, ck, null, myId);
     this.net.startMirror(this.run);
     this.audio.night(this.run.world);
+    this.handIn(this.run);
   }
 
   /** The latest checkpoint for this night, put back together from its three room-state values. */
@@ -422,6 +430,10 @@ export class Game {
     const mine = e.id === this.me;
     if (!mine) return;
     // Badges that happen in the moment.
+    if (e.k === 'orbstart') {
+      this.profile.stats.orbs++;
+      this.markDirty();
+    }
     if (e.k === 'eat') this.award('first-catch');
     if (e.k === 'orbdone' && !e.partial) this.award('orb-complete');
     if (e.k === 'perfect') this.award('perfect-radials');
@@ -460,6 +472,7 @@ export class Game {
   }
 
   afterNight() {
+    this.screens.join(null);
     this.net.stop();
     this.run = null;
     this.input.enabled = false;
@@ -600,10 +613,29 @@ export class Game {
     this.flush();
   }
 
+  /** A friend who arrives at dusk can ask to join (their pick goes to the host in presence). */
+  updateJoinCard(run) {
+    const m = this.room.match;
+    if (this.wantsInMid !== m?.id) {
+      this.wantsIn = null;
+      this.wantsInMid = m?.id ?? null;
+    }
+    const can = !!run && this.screen === 'night' && this.room.spectating && m?.phase === 'playing' && run.world.phase === 'dusk' && !run.myId;
+    if (!can) return this.screens.join(null);
+    const owned = SPECIES_KEYS.filter((k) => this.profile.unlocked.species.includes(k));
+    this.screens.join(owned, this.wantsIn, (sp) => {
+      this.wantsIn = sp;
+      this.profile.lastSpecies = sp;
+      this.markDirty();
+      this.updateJoinCard(this.run);
+    });
+  }
+
   setControlsThrottled(dt) {
     this.ctlT = (this.ctlT ?? 0) - dt;
     if (this.ctlT > 0) return;
     this.ctlT = 0.25;
+    this.updateJoinCard(this.run);
     this.setControls();
     const cam = this.renderer.cam;
     this.screens.zoom(platform.controls.touch && this.screen === 'night', () => (cam.user = Math.min(2.4, cam.user * 1.2)), () => (cam.user = Math.max(0.55, cam.user / 1.2)));
@@ -637,6 +669,7 @@ export class Game {
       focus: run.focusPoint(),
       reduced: this.reduced,
       aim,
+      mark: this.hints.step === 'cast' || this.hints.step === 'orb' ? run.mark(this.hints.step) : null,
       hud: run.hud(touch, { watching: this.room.spectating || !run.myId, mates: this.net.mates(run), hint: hint?.text, hintA: hint?.a ?? 0 }),
       gauges: run.gauges(),
       timers: (run.me()?.mods?.eyes ?? 0) >= 3,
@@ -658,8 +691,8 @@ export class Game {
     // Frame the orb beside the title on wide screens and above it on tall ones; its spider comes and goes.
     const cam = this.renderer.cam;
     const wide = cam.sw > cam.sh;
-    const ox = (wide ? -0.28 * cam.sw : 0) / cam.z;
-    const oy = (wide ? -0.02 * cam.sh : -0.25 * cam.sh) / cam.z;
+    const ox = (wide ? -0.26 * cam.sw : 0) / cam.z;
+    const oy = (wide ? -0.02 * cam.sh : -0.08 * cam.sh) / cam.z;
     this.renderer.draw({
       world: run.world,
       me: null,
@@ -668,7 +701,7 @@ export class Game {
       dt,
       q: this.quality,
       focus: { x: 479 - ox, y: 429 - oy, vx: 0, vy: 0 },
-      box: null,
+      box: wide ? { x0: 260, y0: 210, x1: 710, y1: 660 } : { x0: 320, y0: 270, x1: 640, y1: 590 }, // the whole orb, with a little air around it
       reduced: this.reduced,
       hud: null,
       silk: this.profile?.equip.colour,
