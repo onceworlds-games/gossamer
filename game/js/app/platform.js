@@ -171,21 +171,14 @@ export const platform = {
     return safeAsync(() => sdk?.player?.avatarUrl?.(id, 'head'), null);
   },
   save: {
+    // Outside the platform there is nowhere to keep a save between visits: it lives for this page only.
     async get(key) {
       if (sdk?.save) return safeAsync(() => sdk.save.get(key), null);
-      try {
-        const raw = localStorage.getItem(`gossamer.${key}`);
-        return raw ? JSON.parse(raw) : (memSave.get(key) ?? null);
-      } catch {
-        return memSave.get(key) ?? null;
-      }
+      return memSave.has(key) ? JSON.parse(memSave.get(key)) : null;
     },
     async set(key, value) {
       if (sdk?.save) return safeAsync(() => sdk.save.set(key, value), null);
-      memSave.set(key, value);
-      try {
-        localStorage.setItem(`gossamer.${key}`, JSON.stringify(value));
-      } catch {}
+      memSave.set(key, JSON.stringify(value));
       return null;
     },
   },

@@ -4,5 +4,36 @@
   "description": "Spin a web in a moonlit garden and catch the night's visitors. Solo or up to four.",
   "dir": "game",
   "productionBranch": "main",
-  "genre": "Simulation"
+  "genre": "Simulation",
+  "icon": "store/icon.png",
+  "thumbnails": ["store/thumb-1.png", "store/thumb-2.png", "store/thumb-3.png", "store/thumb-4.png"],
+  "controls": [
+    { "keys": ["W", "A", "S", "D"], "action": "Walk the silk; hold S to drop on a line" },
+    { "keys": ["Click"], "action": "Cast a thread to a twig or thread" },
+    { "keys": ["1", "2", "3", "4"], "action": "Frame, radial, sticky, alarm silk" },
+    { "keys": ["5"], "action": "Quick Orb: click to spin a whole web" },
+    { "keys": ["E"], "action": "Hold to wrap prey, tap to eat" },
+    { "keys": ["F"], "action": "Bite" },
+    { "keys": ["Space"], "action": "Leap (hold to charge: hunter)" },
+    { "keys": ["X", "Right-click"], "action": "Cut a thread" },
+    { "keys": ["Q"], "action": "Shake off the dew" },
+    { "keys": ["B", "L"], "action": "Bolas spider: swing, lure" },
+    { "keys": ["Shift"], "action": "Hurry" },
+    { "keys": ["Tab", "Wheel"], "action": "Ping a spot, zoom" }
+  ],
+  "help": "Spin a web where the prey fly (the notebook's forecast tells you the night), then feel for what lands. Sticky silk catches, dry silk is strong. Wrap a catch before it tears free and eat it before dawn: meet the quota or lose an egg sac. Hide from the wren's shadow and from wasps in the leaves. Spend moult on upgrades between nights. Ten nights make a season.",
+  "badges": [
+    { "id": "first-catch", "name": "First Catch", "description": "Eat your first catch.", "icon": "store/badges/first-catch.png" },
+    { "id": "orb-complete", "name": "Orb Complete", "description": "Close a spiral all the way round.", "icon": "store/badges/orb-complete.png" },
+    { "id": "perfect-radials", "name": "Perfect Radials", "description": "Spin eight or more radials by hand, evenly spaced.", "icon": "store/badges/perfect-radials.png" },
+    { "id": "moth-hunter", "name": "Moth Hunter", "description": "Eat fifty moths.", "icon": "store/badges/moth-hunter.png" },
+    { "id": "beetle-buster", "name": "Beetle Buster", "description": "Eat a beetle without losing a frame or radial thread.", "icon": "store/badges/beetle-buster.png" },
+    { "id": "wren-dodge", "name": "Wren Dodge", "description": "Live through five wren swoops.", "icon": "store/badges/wren-dodge.png" },
+    { "id": "wasp-slayer", "name": "Wasp Slayer", "description": "Beat three wasps as the jumping spider.", "icon": "store/badges/wasp-slayer.png" },
+    { "id": "ten-nights", "name": "Ten Nights", "description": "Finish a season.", "icon": "store/badges/ten-nights.png" },
+    { "id": "daily-weaver", "name": "Daily Weaver", "description": "Spin a night in the daily garden.", "icon": "store/badges/daily-weaver.png" },
+    { "id": "silk-donor", "name": "Silk Donor", "description": "Give a friend a hundred silk.", "icon": "store/badges/silk-donor.png" },
+    { "id": "dew-master", "name": "Dew Master", "description": "Shake twenty dew beads off your web.", "icon": "store/badges/dew-master.png" },
+    { "id": "mantis-off", "name": "Driven Off", "description": "Send the mantis away on the last night.", "icon": "store/badges/mantis-off.png" }
+  ]
 }
