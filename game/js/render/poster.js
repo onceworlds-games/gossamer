@@ -3,6 +3,7 @@
 import { Renderer } from './renderer.js';
 import { createWorld, stepWorld } from '../sim/world.js';
 import { placeAt } from '../sim/spider.js';
+import { planOrb, orbSteps } from '../sim/quickorb.js';
 import { spawnPrey, stick } from '../sim/prey.js';
 import { warnWren, spawnWasp } from '../sim/hostiles.js';
 import { T_STICKY, T_SURFACE, N_PREY } from '../sim/data.js';
@@ -46,12 +47,70 @@ function nightWith(o) {
   sp.mods.maxSilk = 400;
   sp.mods.range = 2000;
   const site = o.site ? o.site(w) : (w.garden.sites.find((x) => x.lane === 0) ?? w.garden.sites[0]);
+  if (o.frame) frameAround(w, sp, site, o.frame);
+  if (o.best === 'any') {
+    // Every site in the garden: the one that makes the handsomest orb.
+    let top = null;
+    for (const cand of w.garden.sites) {
+      const pick = roundest(w, cand, o.r ?? 110);
+      if (!top || pick.score > top.score) top = pick;
+    }
+    if (top) Object.assign(site, top);
+  } else if (o.best) Object.assign(site, roundest(w, site, o.r ?? 110));
   if (o.web !== false) {
     w.cmds.push({ id: 'p', t: 'orb', x: site.x, y: site.y, r: o.r ?? Math.max(95, site.r), p: o.pattern ?? 'orb' });
     for (let i = 0; i < 60 * 9; i++) stepWorld(w, {});
   }
   w.weather.sway = 0.1;
   return { w, sp, site };
+}
+
+/** The hub near a site that gives the fullest, most even orb (the poster wants a handsome web). */
+function roundest(w, site, r) {
+  let best = { x: site.x, y: site.y, score: -Infinity };
+  let bs = -Infinity;
+  for (let dy = -90; dy <= 90; dy += 15) {
+    for (let dx = -120; dx <= 120; dx += 15) {
+      const plan = planOrb(w.web, site.x + dx, site.y + dy, r, 'orb', 2000);
+      if (!plan.ok) continue;
+      const ends = plan.ends.filter(Boolean);
+      if (ends.length < 8) continue;
+      const ds = ends.map((e) => e.d);
+      const mean = ds.reduce((a, b) => a + b, 0) / ds.length;
+      const spread = Math.sqrt(ds.reduce((a, d) => a + (d - mean) ** 2, 0) / ds.length);
+      const score = orbSteps(plan).length * 2 - spread * 0.8 - Math.hypot(dx, dy) * 0.05;
+      if (score > bs) {
+        bs = score;
+        best = { x: site.x + dx, y: site.y + dy, score };
+      }
+    }
+  }
+  return best;
+}
+
+/** A frame first, the way a real orb weaver starts: a ring of strong lines between anchors around the site. */
+function frameAround(w, sp, site, R) {
+  const web = w.web;
+  const pts = [];
+  for (let k = 0; k < 7; k++) {
+    const a = (k / 7) * Math.PI * 2 - Math.PI / 2;
+    const near = web.nearestThread(site.x + Math.cos(a) * R, site.y + Math.sin(a) * R, R * 0.7);
+    if (near) pts.push(near);
+  }
+  for (let k = 0; k < pts.length; k++) {
+    const a = pts[k];
+    const b = pts[(k + 1) % pts.length];
+    const from = web.nearestNode(a.x, a.y, 30);
+    placeAt(w, sp, from ? from.id : web.nid[web.ta[a.s]]);
+    sp.busy = 0;
+    sp.act = null;
+    w.cmds.push({ id: 'p', t: 'cast', type: 0, x: b.x, y: b.y });
+    stepWorld(w, {});
+  }
+  // Spokes reach the frame: go back to the middle.
+  const mid = web.nearestNode(site.x, site.y, 400, (s2) => web.adj[s2].length > 0);
+  if (mid) placeAt(w, sp, mid.id);
+  for (let i = 0; i < 30; i++) stepWorld(w, {});
 }
 
 function dew(w, amount) {
@@ -106,18 +165,20 @@ function frame(w, sp, extra = {}) {
 const SCENES = {
   // The cover: a dewy orb in moonlight, a moth stuck, the spider on its way to it.
   thumb1() {
-    const { w, sp, site } = nightWith({ seed: 20261002, garden: 'cottage', r: 120 });
+    // A seed and hub chosen for a full, even orb on the main lane (searched with planOrb).
+    const { w, sp, site } = nightWith({ seed: 253408, garden: 'cottage', r: 115, site: () => ({ x: 479, y: 429, r: 115 }) });
     dew(w, 0.55);
     const moth = stickAt(w, 'moth', site.x + 45, site.y + 28);
+    if (moth) moth.big = true;
     stickAt(w, 'gnat', site.x - 50, site.y - 30);
     stickAt(w, 'fly', site.x - 20, site.y + 60, 0.6);
     if (moth) walkTo(w, sp, moth.x - 40, moth.y - 18);
     sp.facing = 0.3;
     for (let i = 0; i < 30; i++) stepWorld(w, {});
     for (const p of w.prey) p.timer = 99;
-    const view = frame(w, sp, { site: { x: site.x + 70, y: site.y - 45, r: 105 } });
+    const view = frame(w, sp, { site: { x: site.x + 50, y: site.y - 5, r: 105 } });
     return {
-      zoom: 1.18,
+      zoom: 1.04,
       view,
       after(r) {
         const ctx = r.ctx;
@@ -134,7 +195,7 @@ const SCENES = {
   },
   // The web singing: a beetle has just hit it; brightness runs out along the threads and rings spread.
   thumb2() {
-    const { w, sp, site } = nightWith({ seed: 777001, garden: 'reed', r: 110, site: (wd) => [...wd.garden.sites].sort((a, b) => b.y - a.y)[0] });
+    const { w, sp, site } = nightWith({ seed: 777001, garden: 'reed', r: 110, best: true, site: (wd) => ({ ...[...wd.garden.sites].sort((a, b) => b.y - a.y)[0] }) });
     dew(w, 0.4);
     const beetle = stickAt(w, 'beetle', site.x + 12, site.y - 16);
     if (beetle) beetle.st = 'subdued';
@@ -151,11 +212,11 @@ const SCENES = {
       }
       fx.ring(beetle.x, beetle.y, 1, true);
     }
-    return { zoom: 1.3, view: frame(w, sp, { site: { x: site.x, y: site.y + 60, r: 110 }, mist: 0.25 }) };
+    return { zoom: 1.25, view: frame(w, sp, { site: { x: site.x, y: site.y + 20, r: 110 }, mist: 0.25 }) };
   },
   // The wren's shadow over the web; the spider drops out of its way.
   thumb3() {
-    const { w, sp, site } = nightWith({ seed: 31337, garden: 'churchyard', r: 110 });
+    const { w, sp, site } = nightWith({ seed: 31337, garden: 'churchyard', r: 110, best: true });
     dew(w, 0.25);
     stickAt(w, 'moth', site.x + 30, site.y + 20, 1);
     walkTo(w, sp, site.x, site.y + 70);

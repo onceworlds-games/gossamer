@@ -325,11 +325,38 @@ export function drawDecor(ctx, world, t, q) {
 }
 
 /** The ground strip and (in the reed bed) the pond, drawn over the bottom of everything. */
+function tufts(g, web, row) {
+  const p = new Path2D();
+  const r = makeRng(g.seed ^ 0x7f7);
+  for (let i = 1; i < row.length; i++) {
+    const a = web.ni(row[i - 1]);
+    const b = web.ni(row[i]);
+    if (a < 0 || b < 0) continue;
+    for (let f = 0; f < 1; f += range(r, 0.08, 0.22)) {
+      const x = web.x[a] + (web.x[b] - web.x[a]) * f;
+      const y = web.y[a] + (web.y[b] - web.y[a]) * f + 2;
+      if (g.water && x > g.water.x0 && x < g.water.x1) continue;
+      const n = 2 + Math.floor(rand(r) * 3);
+      for (let k = 0; k < n; k++) {
+        const h = range(r, 8, 26);
+        const lean = range(r, -0.45, 0.45) * h;
+        p.moveTo(x - 1.6 + k * 2, y);
+        p.quadraticCurveTo(x + k * 2 + lean * 0.3, y - h * 0.6, x + k * 2 + lean, y - h);
+        p.quadraticCurveTo(x + k * 2 + lean * 0.3 + 1.4, y - h * 0.5, x + 1.6 + k * 2, y);
+      }
+    }
+  }
+  return p;
+}
+
 export function drawGround(ctx, world, t, q) {
   const g = world.garden;
   const web = world.web;
   const row = g.nodeIds?.[0];
   if (!row) return;
+  g.tufts ??= tufts(g, web, row);
+  ctx.fillStyle = '#0e2523';
+  ctx.fill(g.tufts);
   ctx.fillStyle = '#071514';
   ctx.beginPath();
   ctx.moveTo(-200, H + 300);

@@ -83,14 +83,16 @@ export function drawHud(ctx, h, w, ht, t) {
   // ---- thread in hand (orb weaver): a row of glyphs with their keys, bottom centre
   if (h.types) {
     const n = TYPES.length;
-    const gap = touch ? 0 : 50;
+    const gap = touch ? 0 : 46;
     const by = ht - (touch ? 132 : 34);
+    // Keyboard and mouse: the row lives in the lower left, out of the middle of the night.
+    const rowX = touch ? cx : 36 + ((n - 1) / 2) * gap;
     if (touch) {
       glyph(ctx, h.type, cx, by, 1.3, SILVER);
       text(ctx, h.pattern ?? TYPES[h.type], cx, by + 22, 15, rgba(SILVER, 0.85));
     } else {
       for (let i = 0; i < n; i++) {
-        const x = cx + (i - (n - 1) / 2) * gap;
+        const x = rowX + (i - (n - 1) / 2) * gap;
         const on = i === h.type;
         if (on) {
           ctx.fillStyle = rgba(SILVER, 0.12);
@@ -101,7 +103,7 @@ export function drawHud(ctx, h, w, ht, t) {
         glyph(ctx, i, x, by - 6, 1, on ? SILVER : rgba(SILVER, 0.45));
         text(ctx, `${i + 1}`, x, by + 13, 12, on ? AMBER : rgba(SILVER, 0.45), 'center', 600);
       }
-      text(ctx, h.pattern ?? TYPES[h.type], cx, by - 34, 15, rgba(SILVER, 0.75));
+      text(ctx, h.pattern ?? TYPES[h.type], rowX, by - 34, 15, rgba(SILVER, 0.75));
     }
   }
   // ---- warnings at the edges

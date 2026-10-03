@@ -274,6 +274,9 @@ export function drawBackdrop(ctx, bd, cam, pr, t, q) {
   const mr = Math.max(18, Math.min(w, h) * 0.055);
   const mx = m.x * w - drift * 1.4;
   const my = m.y * h;
+  // Moonlight in the air: the sky around the moon a shade paler, far beyond the halo.
+  ctx.globalAlpha = 0.1;
+  ctx.drawImage(glow, mx - mr * 16, my - mr * 12, mr * 32, mr * 30);
   ctx.globalAlpha = 0.16;
   ctx.drawImage(glow, mx - mr * 6, my - mr * 6, mr * 12, mr * 12);
   ctx.globalAlpha = 0.22;
@@ -301,8 +304,8 @@ export function drawBackdrop(ctx, bd, cam, pr, t, q) {
       ctx.fill(L.path);
       ctx.restore();
       ctx.save();
-      ctx.translate(0, -2.2);
-      ctx.fillStyle = `rgba(150, 196, 188, ${0.1 + i * 0.03})`;
+      ctx.translate((bd.moon.x - 0.5) * 3, -2.4);
+      ctx.fillStyle = `rgba(160, 206, 196, ${0.12 + i * 0.05})`;
       ctx.fill(L.path);
       ctx.restore();
     }

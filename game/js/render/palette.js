@@ -8,7 +8,7 @@ export const PAPER = '#efe4cb'; // the notebook
 export const RUST = '#a9442c'; // danger, stamps
 
 /** Parallax layers from far to near, each a little darker and greener. */
-export const LAYERS = ['#1b4547', '#143637', '#0e2a2b', '#091d1e'];
+export const LAYERS = ['#21504f', '#173d3d', '#0f2c2d', '#081b1c'];
 export const SKY_TOP = '#051113';
 export const SKY_LOW = '#133236';
 export const RIM = 'rgba(160, 204, 196, 0.32)';
