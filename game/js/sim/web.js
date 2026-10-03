@@ -53,6 +53,7 @@ export class Web {
     this.over = new Uint8Array(T);
     this.born = new Float32Array(T);
     this.dry = new Float32Array(T); // seconds a shaken thread stays free of dew
+    this.flag = new Uint8Array(T); // branches: 1 = casts snag on it, 2 = solid to prey (glass)
     this.gridStart = new Int32Array(GW * GH + 1);
     this.gridItems = new Int16Array(MAX_THREADS * 24);
     this.stamp = new Uint32Array(T);
@@ -187,6 +188,7 @@ export class Web {
     this.stick[s] = o.stick ?? (type === T_STICKY ? 1 : 0);
     this.dew[s] = o.dew ?? 0;
     this.dry[s] = 0;
+    this.flag[s] = o.flag ?? 0;
     this.vib[s] = o.vib ?? 0;
     this.len[s] = d;
     this.over[s] = 0;
@@ -197,7 +199,7 @@ export class Web {
     if (type !== T_SURFACE) this.playerThreads++;
     if (s >= this.threadHigh) this.threadHigh = s + 1;
     this.gridOk = false;
-    this.log(['t', id, aId, bId, type, r2(this.rest[s]), r1(this.str[s]), r3(this.snap[s]), r2(this.stick[s]), r2(this.dew[s]), r2(this.born[s])]);
+    this.log(['t', id, aId, bId, type, r2(this.rest[s]), r1(this.str[s]), r3(this.snap[s]), r2(this.stick[s]), r2(this.dew[s]), r2(this.born[s]), this.flag[s]]);
     return id;
   }
 
@@ -251,7 +253,7 @@ export class Web {
       vx: surface ? 0 : o.vx ?? vx,
       vy: surface ? 0 : o.vy ?? vy,
     };
-    const keep = { rest: this.rest[s], str: this.str[s], snap: this.snap[s], stick: this.stick[s], dew: this.dew[s], vib: this.vib[s], born: this.born[s] };
+    const keep = { rest: this.rest[s], str: this.str[s], snap: this.snap[s], stick: this.stick[s], dew: this.dew[s], vib: this.vib[s], born: this.born[s], flag: this.flag[s] };
     const aId = this.nid[a];
     const bId = this.nid[b];
     const ops = this.ops;
@@ -260,11 +262,11 @@ export class Web {
     const node = this.addNode(x, y, kind, nodeOpts);
     if (node < 0) {
       // No room for a node: put the thread back as it was.
-      this.addThread(aId, bId, type, { id, rest: keep.rest, strength: keep.str, snap: keep.snap, stick: keep.stick, dew: keep.dew, born: keep.born });
+      this.addThread(aId, bId, type, { id, rest: keep.rest, strength: keep.str, snap: keep.snap, stick: keep.stick, dew: keep.dew, born: keep.born, flag: keep.flag });
       this.ops = ops;
       return null;
     }
-    const common = { strength: keep.str, snap: keep.snap, stick: keep.stick, vib: keep.vib, born: keep.born };
+    const common = { strength: keep.str, snap: keep.snap, stick: keep.stick, vib: keep.vib, born: keep.born, flag: keep.flag };
     const t1 = this.addThread(aId, node, type, { ...common, id: o.aId, rest: surface ? undefined : keep.rest * t, dew: keep.dew * t });
     const t2 = this.addThread(node, bId, type, { ...common, id: o.bId, rest: surface ? undefined : keep.rest * (1 - t), dew: keep.dew * (1 - t) });
     this.ops = ops;
@@ -597,6 +599,7 @@ export class Web {
       t.u8((this.snap[s] - 1) * 200);
       t.u8(this.stick[s] * 150);
       t.u8(Math.min(255, this.dew[s] * 4));
+      t.u8(this.flag[s]);
     }
     return { n: n.base64(), t: t.base64() };
   }
@@ -636,7 +639,7 @@ export class Web {
       }
     }
     const threads = t.u16();
-    for (let k = 0; k < threads && t.left >= 15; k++) {
+    for (let k = 0; k < threads && t.left >= 16; k++) {
       const id = t.u16();
       const a = t.u16();
       const b = t.u16();
@@ -646,8 +649,9 @@ export class Web {
       const snap = 1 + t.u8() / 200;
       const stick = t.u8() / 150;
       const dew = t.u8() / 4;
+      const flag = t.u8() & 3;
       if (id < GARDEN_IDS || type > T_SURFACE || this.ti(id) >= 0) continue;
-      this.addThread(a, b, type, { id, rest, strength, snap, stick, dew, born: -10 });
+      this.addThread(a, b, type, { id, rest, strength, snap, stick, dew, born: -10, flag });
     }
     this.nextNode = Math.max(this.nextNode, nextNode, GARDEN_IDS);
     this.nextThread = Math.max(this.nextThread, nextThread, GARDEN_IDS);
@@ -676,7 +680,7 @@ export class Web {
           this.setKind(num(1), num(2) | 0);
           break;
         case 't':
-          if (this.ti(num(1)) < 0) this.addThread(num(2), num(3), num(4) | 0, { id: num(1), rest: num(5, 1), strength: num(6, 20), snap: num(7, SNAP), stick: num(8), dew: num(9), born: this.time });
+          if (this.ti(num(1)) < 0) this.addThread(num(2), num(3), num(4) | 0, { id: num(1), rest: num(5, 1), strength: num(6, 20), snap: num(7, SNAP), stick: num(8), dew: num(9), born: this.time, flag: num(11) & 3 });
           break;
         case 'T':
           this.removeThread(num(1), num(2));

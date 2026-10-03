@@ -1,0 +1,449 @@
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('fonts/eb-garamond-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('fonts/eb-garamond-latin-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('fonts/eb-garamond-latin-600-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Cedarville Cursive';
+  src: url('fonts/cedarville-cursive-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --ink: #08171a;
+  --teal: #123335;
+  --leaf: #1e5450;
+  --silver: #e6eee8;
+  --amber: #f0a33c;
+  --paper: #efe4cb;
+  --rust: #a9442c;
+  --pen: #2b2620;
+  --serif: 'EB Garamond', 'Iowan Old Style', Georgia, serif;
+  --hand: 'Cedarville Cursive', 'Segoe Script', cursive;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--silver);
+  font-family: var(--serif);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+#view {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#ui > * {
+  pointer-events: auto;
+}
+
+button {
+  font-family: var(--serif);
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+
+.key {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.3em;
+  margin-left: 0.5em;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 0.72em;
+  line-height: 1.5em;
+  opacity: 0.7;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- title */
+.title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3vh;
+  padding: calc(64px + var(--safe-t)) 16px calc(24px + var(--safe-b));
+  pointer-events: none;
+  animation: rise 1.6s ease-out both;
+}
+
+.title h1 {
+  margin: 0;
+  font-weight: 400;
+  font-style: italic;
+  font-size: clamp(56px, 13vw, 132px);
+  letter-spacing: 0.02em;
+  color: var(--silver);
+  text-shadow: 0 2px 30px rgba(2, 8, 9, 0.9);
+}
+
+.title .play {
+  pointer-events: auto;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 14px 54px;
+  color: var(--ink);
+  background: var(--silver);
+  border: none;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(230, 238, 232, 0.4), 0 10px 40px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease, background 0.2s;
+}
+
+.title .play:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.title .play:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------- the field notebook */
+.book {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(60px + var(--safe-t)) 12px calc(96px + var(--safe-b));
+  background: rgba(4, 10, 11, 0.55);
+  animation: fade 0.5s ease-out both;
+}
+
+.page {
+  position: relative;
+  width: min(980px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(255, 255, 255, 0.35), transparent 60%),
+    radial-gradient(ellipse at 85% 90%, rgba(140, 110, 70, 0.18), transparent 55%),
+    var(--paper);
+  color: var(--pen);
+  border-radius: 3px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 0 60px rgba(120, 90, 50, 0.18);
+  padding: 26px clamp(16px, 4vw, 44px) 30px;
+  animation: page 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(transparent 0 31px, rgba(60, 90, 110, 0.13) 31px 32px);
+  border-radius: 3px;
+}
+
+.page canvas.corner {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  pointer-events: none;
+}
+
+.page h2 {
+  position: relative;
+  margin: 0 0 4px;
+  font-weight: 400;
+  font-style: italic;
+  font-size: clamp(30px, 5vw, 44px);
+  color: #1c1915;
+}
+
+.page .note {
+  position: relative;
+  font-family: var(--hand);
+  font-size: clamp(20px, 3.2vw, 25px);
+  line-height: 1.35;
+  color: #2c3f5c;
+  margin: 2px 0 10px;
+}
+
+.page .row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.page .label {
+  position: relative;
+  font-variant: small-caps;
+  letter-spacing: 0.1em;
+  font-size: 17px;
+  font-weight: 600;
+  color: #5a4a36;
+  margin: 18px 0 6px;
+}
+
+.stamp {
+  display: inline-block;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rust);
+  border: 2px solid var(--rust);
+  padding: 2px 10px;
+  transform: rotate(-4deg);
+  font-size: 18px;
+  opacity: 0.85;
+}
+
+.card {
+  position: relative;
+  flex: 1 1 140px;
+  min-width: 130px;
+  min-height: 44px;
+  text-align: left;
+  background: rgba(255, 252, 240, 0.55);
+  color: var(--pen);
+  border: 1px solid rgba(90, 74, 54, 0.35);
+  border-radius: 2px;
+  padding: 8px 10px 8px;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.card b {
+  display: block;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.card small {
+  display: block;
+  font-family: var(--hand);
+  font-size: 18px;
+  color: #2c3f5c;
+  margin-top: 2px;
+}
+
+.card .tiers {
+  display: block;
+  margin-top: 6px;
+}
+
+.card.on {
+  background: rgba(240, 163, 60, 0.18);
+  border-color: rgba(169, 68, 44, 0.65);
+  box-shadow: inset 0 0 0 1px rgba(169, 68, 44, 0.4);
+}
+
+.card:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.card:not(:disabled):hover {
+  background: rgba(255, 252, 240, 0.85);
+}
+
+.sketches {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: flex-end;
+}
+
+.sketch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--hand);
+  font-size: 19px;
+  color: #2c3f5c;
+}
+
+.sketch canvas {
+  width: 74px;
+  height: 56px;
+}
+
+.go {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: #1f2a2a;
+  border: none;
+  border-radius: 2px;
+  padding: 10px 30px;
+}
+
+.go.ghost {
+  color: var(--pen);
+  background: transparent;
+  border: 1px solid rgba(43, 38, 32, 0.4);
+}
+
+/* ---------------------------------------------------------------- small cards over the night */
+.card-over {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: min(340px, 90vw);
+  padding: 22px 26px;
+  text-align: center;
+  background: var(--paper);
+  color: var(--pen);
+  border-radius: 3px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: fade 0.3s ease-out both;
+}
+
+.card-over h3 {
+  margin: 0 0 14px;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 30px;
+}
+
+.tag {
+  position: absolute;
+  top: calc(70px + var(--safe-t));
+  left: 50%;
+  transform: translateX(-50%);
+  font-variant: small-caps;
+  letter-spacing: 0.14em;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--silver);
+  background: rgba(8, 23, 26, 0.75);
+  padding: 6px 16px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.zoom {
+  position: absolute;
+  right: calc(12px + var(--safe-r));
+  top: calc(118px + var(--safe-t));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zoom button {
+  width: 44px;
+  height: 44px;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--silver);
+  background: rgba(8, 23, 26, 0.6);
+  border: 1px solid rgba(230, 238, 232, 0.25);
+  border-radius: 50%;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes page {
+  from {
+    opacity: 0;
+    transform: translateY(18px) rotate(-0.6deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title,
+  .page,
+  .book,
+  .card-over {
+    animation: none;
+  }
+}
+
+.reduced .title,
+.reduced .page,
+.reduced .book,
+.reduced .card-over {
+  animation: none;
+}

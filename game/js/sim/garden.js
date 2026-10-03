@@ -162,8 +162,8 @@ function cottage(b) {
   const ly = range(r, 200, 270);
   const lx0 = range(r, 300, 420);
   const lx1 = range(r, 1240, 1400);
-  const poleA = b.surface([b.point(g, b.nearest(g, lx0)).slice(), [lx0, ly]], { kind: 'pole', root: [g, b.nearest(g, lx0)], w0: 6, w1: 6 });
-  const poleB = b.surface([b.point(g, b.nearest(g, lx1)).slice(), [lx1, ly - 10]], { kind: 'pole', root: [g, b.nearest(g, lx1)], w0: 6, w1: 6 });
+  const poleA = b.surface([b.point(g, b.nearest(g, lx0)).slice(), [lx0, ly]], { kind: 'pole', root: [g, b.nearest(g, lx0)], w0: 4, w1: 3.4 });
+  const poleB = b.surface([b.point(g, b.nearest(g, lx1)).slice(), [lx1, ly - 10]], { kind: 'pole', root: [g, b.nearest(g, lx1)], w0: 4, w1: 3.4 });
   const linePts = [];
   for (let k = 0; k <= 8; k++) {
     const t = k / 8;
@@ -384,6 +384,9 @@ function nodeKeys(g) {
   return { keys, pos };
 }
 
+/** Branch kinds a cast line snags on (thin foliage lets it through). */
+const SNAG = new Set(['ground', 'trunk', 'stem', 'cane', 'reed', 'post', 'rail', 'pole', 'bench', 'stake', 'bar', 'glass', 'iron', 'stone', 'bough', 'line', 'chain']);
+
 /** Builds the garden into a web: anchor nodes for each point, static branch threads between them. Returns ids. */
 export function buildGarden(web, g) {
   const { keys, pos } = nodeKeys(g);
@@ -393,8 +396,10 @@ export function buildGarden(web, g) {
   g.solidThreads = [];
   ids.forEach((row, si) => {
     const first = tid;
+    const sf = g.surfaces[si];
+    const flag = (SNAG.has(sf.kind) ? 1 : 0) | (sf.solid ? 2 : 0);
     for (let pi = 1; pi < row.length; pi++) {
-      if (row[pi] !== row[pi - 1]) web.addThread(row[pi - 1], row[pi], T_SURFACE, { id: tid++ });
+      if (row[pi] !== row[pi - 1]) web.addThread(row[pi - 1], row[pi], T_SURFACE, { id: tid++, flag });
     }
     if (si === 0) g.groundThreads = tid - 1; // the ground is built first: its branches are ids 1..groundThreads
     if (g.surfaces[si].solid) for (let id = first; id < tid; id++) g.solidThreads.push(id);

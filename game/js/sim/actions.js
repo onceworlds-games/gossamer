@@ -76,14 +76,14 @@ export function resolveTarget(world, sp, tx, ty, radius = SNAP_RADIUS) {
   return { th: th.id, t: th.t, x: th.x, y: th.y };
 }
 
-/** A cast line catches on the first branch it crosses before its target. */
-function catchOnBranch(world, sp, target) {
+/** A cast line catches on the first sturdy branch it crosses before its target (thin foliage lets it pass). */
+export function catchOnBranch(world, sp, target) {
   const web = world.web;
   let best = null;
   let bu = 0.97;
   const here = sp.node ? web.ni(sp.node) : -1;
   for (let s = 0; s < web.threadHigh; s++) {
-    if (web.tid[s] < 0 || web.type[s] !== T_SURFACE) continue;
+    if (web.tid[s] < 0 || web.type[s] !== T_SURFACE || !(web.flag[s] & 1)) continue;
     if (target.th === web.tid[s] || s === web.ti(sp.th)) continue;
     const a = web.ta[s];
     const b = web.tb[s];

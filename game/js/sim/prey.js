@@ -252,7 +252,7 @@ function contacts(world, p, x0, y0, def) {
   web.near(x0, y0, p.x, p.y, (s) => {
     if (web.tid[s] === p.hit && p.hitT > 0) return;
     const type = web.type[s];
-    if (type === T_SURFACE && !world.solid?.has(web.tid[s])) return;
+    if (type === T_SURFACE && !(web.flag[s] & 2)) return;
     const a = web.ta[s];
     const b = web.tb[s];
     if (web.kind[a] === N_PREY && web.kind[b] === N_PREY) return;
@@ -416,7 +416,7 @@ export function freeFromWeb(world, p) {
 function tryLand(world, p) {
   const web = world.web;
   p.landAt = -1;
-  const near = web.nearestThread(p.x, p.y, 140, (s) => web.type[s] === T_SURFACE && Math.min(web.y[web.ta[s]], web.y[web.tb[s]]) < GROUND - 30 && !world.solid?.has(web.tid[s]));
+  const near = web.nearestThread(p.x, p.y, 140, (s) => web.type[s] === T_SURFACE && Math.min(web.y[web.ta[s]], web.y[web.tb[s]]) < GROUND - 30 && !(web.flag[s] & 2));
   if (!near) return;
   p.st = 'land';
   p.landTh = near.id;
