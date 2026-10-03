@@ -76,6 +76,10 @@ export class Game {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this.flush(true);
     });
+    // Sound starts from a tap or key inside the game (iPhones insist).
+    const wake = () => this.audio.unlock();
+    addEventListener('pointerdown', wake, true);
+    addEventListener('keydown', wake, true);
     platform.on('pause', () => this.pause(true));
     platform.on('resume', () => this.pause(false));
     this.net = new Coop(this.room, this);
