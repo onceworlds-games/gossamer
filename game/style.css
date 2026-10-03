@@ -764,6 +764,18 @@ button:focus-visible {
   gap: 8px;
 }
 
+/* Held sideways the platform's thread button sits where the zoom pair would: it goes to the gap between the thumbs. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .zoom {
+    top: auto;
+    right: auto;
+    left: 54%;
+    bottom: calc(12px + var(--safe-b));
+    transform: translateX(-50%);
+    flex-direction: row;
+  }
+}
+
 .zoom button {
   width: 44px;
   height: 44px;
