@@ -84,7 +84,7 @@ export class Notebook {
       this.page.append(cols);
     }
     if (this.standalone && !s.over) {
-      const row = div('row');
+      const row = div('row dock');
       row.append(button('go', 'Begin the night', () => g.room.startMatch()));
       this.page.append(row);
     }

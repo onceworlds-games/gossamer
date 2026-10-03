@@ -595,6 +595,16 @@ button:focus-visible {
   padding: 10px 30px;
 }
 
+/* Off the platform the start button stays in view at the foot of the page. */
+.page > .dock {
+  position: sticky;
+  bottom: -30px;
+  z-index: 2;
+  margin: 18px calc(-1 * clamp(16px, 4vw, 44px)) -30px;
+  padding: 16px clamp(16px, 4vw, 44px) 22px;
+  background: linear-gradient(rgba(239, 228, 203, 0), var(--paper) 38%);
+}
+
 .go.ghost {
   color: var(--pen);
   background: transparent;
