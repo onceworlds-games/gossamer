@@ -2,6 +2,7 @@
 // flowers at their tips, the hedge masses that hide a spider, and each garden's own props.
 import { W, H, GROUND } from '../sim/data.js';
 import { makeRng, range, rand } from '../sim/rng.js';
+import { retreatNode } from '../sim/garden.js';
 import { INK, TEAL, LEAF, SILVER, AMBER, RUST, BRANCH, BRANCH_RIM, rgba } from './palette.js';
 import { glowSprite, scallop } from './backdrop.js';
 
@@ -159,6 +160,70 @@ function leafShape(ctx, x, y, a, s, fillOnly = false) {
     ctx.lineTo(e[0], e[1]);
     ctx.stroke();
   }
+}
+
+/** The Retreat: a rolled leaf on its branch. The tube goes behind the creatures; while a spider shelters in it, the
+ * leaf's front lip is drawn again over it, so it peeks out. */
+export function drawRetreat(ctx, world, t, spiders, front) {
+  const g = world.garden;
+  if (!g.retreat || !g.nodeIds) return;
+  const web = world.web;
+  const n = web.ni(retreatNode(g));
+  if (n < 0) return;
+  const x = web.x[n];
+  const y = web.y[n];
+  const inside = spiders.some((s) => s.mode === 'walk' && Math.hypot(s.x - x, s.y - y) < 18);
+  if (front && !inside) return;
+  ctx.save();
+  ctx.translate(x, y + 5);
+  ctx.rotate(Math.sin(t * 0.8 + x * 0.013) * 0.05);
+  ctx.scale(1.55, 1.55);
+  if (!front) {
+    ctx.fillStyle = '#245a50';
+    ctx.beginPath();
+    ctx.moveTo(-18, -9);
+    ctx.quadraticCurveTo(2, -15, 20, -4);
+    ctx.quadraticCurveTo(26, 3, 21, 10);
+    ctx.quadraticCurveTo(2, 15, -18, 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#061314';
+    ctx.beginPath();
+    ctx.ellipse(-15, 0, 5.5, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (inside) {
+      ctx.fillStyle = rgba(AMBER, 0.1);
+      ctx.beginPath();
+      ctx.ellipse(-4, 0, 16, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(150, 200, 186, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-15, -9.5);
+    ctx.quadraticCurveTo(2, -15, 19, -5);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(6, 19, 20, 0.85)';
+    ctx.beginPath();
+    ctx.arc(15, 2.5, 4.5, -1.3, 3.7);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#21564d';
+    ctx.beginPath();
+    ctx.moveTo(-18, 2);
+    ctx.quadraticCurveTo(0, 6, 22, 3);
+    ctx.quadraticCurveTo(24, 7, 21, 10);
+    ctx.quadraticCurveTo(2, 15, -18, 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(150, 200, 186, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-17, 2.2);
+    ctx.quadraticCurveTo(0, 6, 21, 3.2);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 /** Branches, stems and rails on their current (swaying) anchor positions. */

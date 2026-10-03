@@ -1,7 +1,7 @@
 // Puts a frame together: backdrop, garden, silk, the living, effects, weather and the HUD, through one camera.
 import { Camera } from './camera.js';
 import { makeBackdrop, drawBackdrop, drawMist, drawFinish, drawFront } from './backdrop.js';
-import { makeGardenArt, drawGardenBack, drawSurfaces, drawDecor, drawGround } from './gardenart.js';
+import { makeGardenArt, drawGardenBack, drawSurfaces, drawDecor, drawGround, drawRetreat } from './gardenart.js';
 import { drawWeb, drawKnots, drawAim } from './webart.js';
 import { drawSpider, drawPrey, drawWasp, drawWren, drawMantis, drawFireflies, drawLures } from './creatures.js';
 import { drawFx, updateFx, rain as rainFx } from './fx.js';
@@ -81,6 +81,7 @@ export class Renderer {
     drawGardenBack(ctx, world, this.art, t, q);
     drawSurfaces(ctx, world, cam.z, q);
     drawDecor(ctx, world, t, q);
+    drawRetreat(ctx, world, t, v.spiders, false);
     drawFireflies(ctx, world.lights, t, q);
     ctx.globalAlpha = v.webAlpha ?? 1;
     drawWeb(ctx, world, { z: cam.z, t, q, silk: v.silk, dewStyle: v.dewStyle });
@@ -96,6 +97,7 @@ export class Renderer {
       const anchor = sp.mode === 'hang' && sp.hang ? anchorPos(world, sp.hang.anchor) : null;
       drawSpider(ctx, world, sp, t, v.dt, { anchor, spin: sp.id === v.me ? v.spin : sp.spin });
     }
+    drawRetreat(ctx, world, t, v.spiders, true);
     if (world.mantis) drawMantis(ctx, world.mantis, t);
     for (const p of prey) if (p.st === 'fly' && cam.visible(p.x, p.y)) drawPrey(ctx, p, t, q);
     for (const w of world.wasps ?? []) if (cam.visible(w.x, w.y)) drawWasp(ctx, w, t);

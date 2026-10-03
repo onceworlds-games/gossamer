@@ -58,7 +58,7 @@ export const PREY_KEYS = Object.keys(PREY);
 export const MAX_PREY = 70;
 
 // ---------------------------------------------------------------- hostiles
-export const WASP = { speed: 150, huntSpeed: 230, sting: 25, detect: 190, patrol: 48, cutTime: 0.45, hp: 2, stun: 2.5, loot: 200 };
+export const WASP = { speed: 150, huntSpeed: 230, sting: 25, detect: 190, patrol: 48, cutTime: 0.45, hp: 2, stun: 2.5, loot: 300, carry: 5 };
 export const WREN = { warn: 2.5, band: 86, damage: 55, cross: 0.75 };
 export const MANTIS = { speed: 52, reach: 74, damage: 40, windup: 0.95, climb: 12, falls: 3 };
 
@@ -91,7 +91,7 @@ export const DUSK = 25;
 export const NIGHT = 120;
 export const DAWN_RECYCLE = 0.6;
 export const REST_SILK = 0.25; // of max, regained over the day
-export const QUOTAS = [9, 14, 20, 25, 30, 33, 35, 37, 39, 40]; // tuned with scripts/balance.mjs
+export const QUOTAS = [9, 14, 20, 25, 30, 33, 35, 37, 39, 46]; // tuned with scripts/balance.mjs
 export const SEASON_NIGHTS = 10;
 export const START_LIVES = 3;
 export const ENDLESS_GROWTH = 1.08;
