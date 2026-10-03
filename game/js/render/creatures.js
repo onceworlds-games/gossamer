@@ -11,14 +11,14 @@ const TINTS = ['#dfe8e2', '#f0c27a', '#9fd8c4', '#e8a58e'];
 // ---------------------------------------------------------------- spiders
 const LEGS = [
   // [side, attach angle (radians from forward), rest reach angle, femur, tibia]
-  [1, 0.5, 0.55, 7.5, 9.5],
-  [1, 1.15, 1.25, 6.5, 8],
-  [1, 1.9, 2.0, 6, 7.5],
-  [1, 2.5, 2.65, 7, 9],
-  [-1, 0.5, 0.55, 7.5, 9.5],
-  [-1, 1.15, 1.25, 6.5, 8],
-  [-1, 1.9, 2.0, 6, 7.5],
-  [-1, 2.5, 2.65, 7, 9],
+  [1, 0.5, 0.5, 9.5, 12],
+  [1, 1.15, 1.2, 8, 10],
+  [1, 1.9, 2.0, 7, 9],
+  [1, 2.5, 2.7, 8.5, 11],
+  [-1, 0.5, 0.5, 9.5, 12],
+  [-1, 1.15, 1.2, 8, 10],
+  [-1, 1.9, 2.0, 7, 9],
+  [-1, 2.5, 2.7, 8.5, 11],
 ];
 
 function rigFor(id) {
@@ -172,19 +172,21 @@ export function drawSpider(ctx, world, sp, t, dt, o = {}) {
     const ka = base - side * Math.acos(cosA);
     const kx = hx + Math.cos(ka) * a;
     const ky = hy + Math.sin(ka) * a;
-    ctx.strokeStyle = body;
-    ctx.lineWidth = (kind === 'jumper' ? 1.5 : 1.2) * scale;
+    // A pale edge first, so dark legs read against dark leaves; then the leg; then a lit knee.
+    ctx.strokeStyle = rgba(SILVER, downed ? 0.12 : 0.3);
+    ctx.lineWidth = (kind === 'jumper' ? 2.6 : 2.1) * scale;
     ctx.beginPath();
     ctx.moveTo(hx, hy);
     ctx.lineTo(kx, ky);
     ctx.lineTo(fx, fy);
     ctx.stroke();
-    ctx.strokeStyle = rgba(SILVER, 0.28);
-    ctx.lineWidth = 0.5 * scale;
-    ctx.beginPath();
-    ctx.moveTo(hx, hy - 0.4);
-    ctx.lineTo(kx, ky - 0.4);
+    ctx.strokeStyle = body;
+    ctx.lineWidth = (kind === 'jumper' ? 1.7 : 1.3) * scale;
     ctx.stroke();
+    ctx.fillStyle = rgba(SILVER, 0.55);
+    ctx.beginPath();
+    ctx.arc(kx, ky, 0.75 * scale, 0, Math.PI * 2);
+    ctx.fill();
   }
   // Body: abdomen behind, head in front; each species its own shape; a moonlit edge on top.
   const idx = (sp.idx ?? 0) % 4;
@@ -321,7 +323,8 @@ export function drawPrey(ctx, p, t, q) {
   ctx.save();
   ctx.translate(p.x + twitch, p.y);
   if (p.st === 'fly' && p.sp !== 'gnat' && p.sp !== 'midge') ctx.rotate(Math.atan2(p.vy, Math.abs(p.vx) + 1e-3) * 0.4 * dir);
-  ctx.scale(dir * big, big);
+  const show = p.sp === 'gnat' || p.sp === 'midge' ? 1.6 : 1.45;
+  ctx.scale(dir * big * show, big * show);
   switch (p.sp) {
     case 'gnat':
     case 'midge':
@@ -559,7 +562,7 @@ export function drawWren(ctx, wr, t, view) {
 function bird(ctx, x, y, dir, t) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(dir, 1);
+  ctx.scale(dir * 1.5, 1.5);
   const flap = Math.sin(t * 30);
   ctx.fillStyle = '#2b1d16';
   ctx.beginPath();
