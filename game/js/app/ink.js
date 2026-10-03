@@ -225,6 +225,133 @@ export function upgradeGlyph(id) {
   return inkCanvas(32, 32, (c) => (GLYPHS[id] ?? GLYPHS.templates)(c));
 }
 
+// ---------------------------------------------------------------- stickers bought with egg points, pasted in
+const STICKERS = {
+  fern: (c) => {
+    const pts = [];
+    for (let i = 0; i <= 10; i++) {
+      const t = i / 10;
+      pts.push([15 + t * 25 + Math.sin(t * 3) * 2, 46 - t * 36]);
+    }
+    c.fillStyle = 'rgba(79, 110, 74, 0.5)';
+    c.strokeStyle = '#3b5236';
+    for (let i = 1; i < 10; i++) {
+      const [x, y] = pts[i];
+      const tx = pts[i + 1][0] - pts[i - 1][0];
+      const ty = pts[i + 1][1] - pts[i - 1][1];
+      const d = Math.hypot(tx, ty) || 1;
+      const L = 9 * (1 - (i / 10) * 0.75);
+      for (const side of [-1, 1]) {
+        const nx = (-ty / d) * side;
+        const ny = (tx / d) * side;
+        c.beginPath();
+        c.ellipse(x + nx * L * 0.6, y + ny * L * 0.6 - 1, L * 0.6, 1.9, Math.atan2(ny, nx) - 0.35 * side, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+    pen(c, pts, 1.3, 3);
+  },
+  beetle: (c) => {
+    for (const side of [-1, 1]) {
+      for (const k of [-1, 0, 1]) pen(c, [[28 + side * 7, 31 + k * 6], [28 + side * 14, 29 + k * 8], [28 + side * 17, 33 + k * 9]], 1.1, 5 + k);
+    }
+    pen(c, [[26, 15], [22, 10], [19, 9]], 1, 2);
+    pen(c, [[30, 15], [34, 10], [37, 9]], 1, 4);
+    c.fillStyle = 'rgba(43, 38, 32, 0.88)';
+    c.beginPath();
+    c.ellipse(28, 32, 9, 12, 0, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.ellipse(28, 18, 5, 4, 0, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = '#f7efdc';
+    c.lineWidth = 0.9;
+    c.beginPath();
+    c.moveTo(28, 22);
+    c.lineTo(28, 43);
+    c.stroke();
+    c.strokeStyle = 'rgba(247, 239, 220, 0.55)';
+    c.beginPath();
+    c.arc(24, 29, 4.5, 3.5, 4.6);
+    c.stroke();
+  },
+  moon: (c) => {
+    c.fillStyle = 'rgba(200, 160, 70, 0.35)';
+    c.beginPath();
+    c.arc(28, 28, 15, -2.023, 2.023, false);
+    c.arc(21, 28, 13.5, 1.537, -1.537, true);
+    c.closePath();
+    c.fill();
+    c.lineWidth = 1.3;
+    c.stroke();
+    for (const [x, y] of [[13, 15], [42, 43], [11, 40]]) {
+      pen(c, [[x - 2.5, y], [x + 2.5, y]], 0.8, x);
+      pen(c, [[x, y - 2.5], [x, y + 2.5]], 0.8, y);
+    }
+  },
+  feather: (c) => {
+    const pts = [];
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      pts.push([13 + t * 29, 46 - t * 35 + Math.sin(t * Math.PI) * 4]);
+    }
+    const side = (sgn) =>
+      pts.map(([x, y], i) => {
+        const a = Math.max(0, i - 1);
+        const b = Math.min(12, i + 1);
+        const tx = pts[b][0] - pts[a][0];
+        const ty = pts[b][1] - pts[a][1];
+        const d = Math.hypot(tx, ty) || 1;
+        const t = i / 12;
+        const w = t < 0.18 ? 0 : 7.5 * Math.sin(Math.PI * Math.min(1, (t - 0.18) / 0.86)) ** 0.7;
+        return [x + (-ty / d) * w * sgn, y + (tx / d) * w * sgn];
+      });
+    const left = side(1);
+    const right = side(-1);
+    c.fillStyle = WASH;
+    c.beginPath();
+    [...left, ...[...right].reverse()].forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+    c.fill();
+    for (let i = 3; i < 12; i++) {
+      pen(c, [pts[i], left[i + 1]], 0.7, i);
+      pen(c, [pts[i], right[i + 1]], 0.7, i + 20);
+    }
+    pen(c, pts, 1.4, 7);
+  },
+  key: (c) => {
+    c.lineWidth = 1.6;
+    c.fillStyle = 'rgba(200, 160, 70, 0.3)';
+    c.beginPath();
+    c.arc(18, 19, 7.5, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    c.beginPath();
+    c.arc(18, 19, 3, 0, Math.PI * 2);
+    c.stroke();
+    pen(c, [[23.5, 24.5], [42, 43]], 2, 3);
+    pen(c, [[37, 38], [33, 42], [35.5, 44.5], [39.5, 40.5]], 1.5, 4);
+    pen(c, [[41, 42], [38, 45.5]], 1.5, 6);
+  },
+};
+
+/** A pasted-in sticker: a small paper label with an ink drawing on it. */
+export function stickerArt(id, size = 56) {
+  return inkCanvas(size, size, (c) => {
+    c.scale(size / 56, size / 56);
+    c.fillStyle = '#f8f1df';
+    c.strokeStyle = 'rgba(80, 60, 40, 0.35)';
+    c.lineWidth = 1;
+    c.beginPath();
+    if (c.roundRect) c.roundRect(4, 4, 48, 48, 5);
+    else c.rect(4, 4, 48, 48);
+    c.fill();
+    c.stroke();
+    c.strokeStyle = PEN;
+    c.fillStyle = PEN;
+    (STICKERS[id] ?? STICKERS.fern)(c);
+  }, 'sticker');
+}
+
 /** A rust circle drawn round something chosen (absolutely positioned over its parent). */
 export function circleMark(w, h) {
   return inkCanvas(w, h, (c) => {

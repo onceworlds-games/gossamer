@@ -51,8 +51,8 @@ one of three traits. Ten nights make a season.
 - **Twelve upgrades** of three tiers, **twenty-four traits**, Quick Orb patterns (orb, ladder, funnel, close-woven).
 - **Modes**: the ten-night season, Endless after it, the Daily Garden (one seeded night), and Cold Snap levels 1-5
   (each adds a rule) after a finished season.
-- **The notebook**: egg points from each season buy gardens, silk colours, dew styles and hatchlings (start a season
-  with a trait already pinned).
+- **The notebook**: egg points from each season buy gardens, silk colours, dew styles, stickers for its pages and
+  hatchlings (start a season with a trait already pinned).
 
 ## Playing together
 

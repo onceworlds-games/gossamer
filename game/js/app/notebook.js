@@ -8,7 +8,7 @@ import { GARDENS, GARDEN_KEYS, SPECIES, UPGRADES, UPGRADE_KEYS, upgradeCost, TRA
 import { nightRules, makeScript } from '../sim/night.js';
 import { shopItems, buyItem, buyHatchling } from '../sim/profile.js';
 import { drawPrey } from '../render/creatures.js';
-import { spiderSketch, gardenSketch, upgradeGlyph, circleMark, tierDots, inkCanvas } from './ink.js';
+import { spiderSketch, gardenSketch, upgradeGlyph, circleMark, tierDots, inkCanvas, stickerArt } from './ink.js';
 
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 const say = (n) => (n <= 12 ? WORDS[n] : String(n));
@@ -82,6 +82,18 @@ export class Notebook {
       this.friends(right, s);
       cols.append(left, right);
       this.page.append(cols);
+    }
+    // Stickers bought with egg points, pasted in at the foot of the page.
+    const owned = g.profile?.unlocked?.stickers ?? [];
+    if (owned.length) {
+      const row = div('stickers');
+      owned.forEach((id, i) => {
+        const c = stickerArt(id);
+        c.style.transform = `rotate(${[-6, 4, -3, 7, -5][i % 5]}deg)`;
+        c.setAttribute('aria-hidden', 'true');
+        row.append(c);
+      });
+      this.page.append(row);
     }
     if (this.standalone && !s.over) {
       const row = div('row dock');
@@ -258,7 +270,7 @@ export class Notebook {
     this.page.append(label(`Egg points · ${Math.floor(p.eggs)}`));
     const ledger = div('ledger');
     for (const item of shopItems(p).slice(0, 14)) {
-      const glyph = item.kind === 'gardens' ? gardenSketch(item.id) : upgradeGlyph(item.kind === 'dews' ? 'shake' : item.kind === 'colours' ? 'glands' : 'camo');
+      const glyph = item.kind === 'gardens' ? gardenSketch(item.id) : item.kind === 'stickers' ? stickerArt(item.id, 34) : upgradeGlyph(item.kind === 'dews' ? 'shake' : 'glands');
       if (item.kind === 'gardens') glyph.style.width = '48px';
       ledger.append(ledgerRow(glyph, cap(item.name), { gardens: 'A garden', colours: 'Silk colour', dews: 'Dew style', stickers: 'Sticker' }[item.kind], 0, String(item.cost), p.eggs < item.cost, () => {
         if (!buyItem(p, item.kind, item.id)) return;
