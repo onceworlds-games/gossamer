@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createWorld, stepWorld, command } from '../game/js/sim/world.js';
 import { snapRadiusFor } from '../game/js/sim/actions.js';
 import { placeAt } from '../game/js/sim/spider.js';
+import { removeThread } from '../game/js/sim/actions.js';
 import { SNAP_RADIUS } from '../game/js/sim/data.js';
 
 function anchorsNear(w, sp, lo, hi, n) {
@@ -85,4 +86,49 @@ test('the pointer reaches at least 48 screen px, however far out the view is zoo
   assert.ok(snapRadiusFor(0.6) > SNAP_RADIUS && snapRadiusFor(0.6) * 0.6 >= 47.9);
   assert.ok(snapRadiusFor(0.01) <= SNAP_RADIUS * 1.8 + 1e-9);
   assert.equal(snapRadiusFor(NaN), SNAP_RADIUS);
+});
+
+test('a tab hidden for a minute (or a 400 ms frame) comes back to a calm night, not a minute of simulation', async () => {
+  const { NightRun } = await import('../game/js/app/nightrun.js');
+  const run = new NightRun({ seed: 9, night: 3, garden: 'cottage', mode: 'season', players: [{ id: 'a', sp: 'orb' }] }, { role: 'host', myId: 'a' });
+  const t0 = run.world.t;
+  const ticks = run.update(60, { mx: 0, my: 0 });
+  assert.ok(ticks <= 30, `ran ${ticks} ticks`);
+  assert.ok(run.world.t - t0 < 0.55, 'the world moved half a second at most');
+  assert.ok(run.acc < 1 / 60 + 1e-9, 'no backlog is kept');
+  assert.equal(run.update(0.4, { mx: 0, my: 0 }) <= 16, true);
+  for (const sp of run.world.spiders) assert.ok(Number.isFinite(sp.x) && Number.isFinite(sp.y));
+});
+
+test('the last Quick Orb is offered back once the wren has taken it', async () => {
+  const { NightRun } = await import('../game/js/app/nightrun.js');
+  const w0 = createWorld({ seed: 31, night: 4, garden: 'cottage', players: [{ id: 'a', sp: 'orb' }] });
+  const site = w0.garden.sites.find((s) => s.lane === 0) ?? w0.garden.sites[0];
+  const run = new NightRun({ seed: 31, night: 4, garden: 'cottage', mode: 'season', players: [{ id: 'a', sp: 'orb' }] }, { role: 'host', myId: 'a' });
+  const w = run.world;
+  w.script.events = [];
+  const sp = w.spiders[0];
+  sp.silk = sp.mods.maxSilk = 400;
+  const from = w.web.nearestNode(site.x, site.y, 500, (s) => w.web.adj[s].length > 0 && w.web.kind[s] === 0);
+  if (from) placeAt(w, sp, from.id);
+  const heard = [];
+  run.onEvent = (e) => heard.push(e.k);
+  run.command({ t: 'orb', x: site.x, y: site.y, r: 95, p: 'orb' });
+  for (let i = 0; i < 60 * 9; i++) run.update(1 / 60, { mx: 0, my: 0 });
+  assert.ok(run.lastOrb && run.lastOrb.n0 > 10, 'the orb is remembered with its strands counted');
+  assert.equal(run.ghost, null);
+  // The wren takes everything.
+  for (let s = 0; s < w.web.threadHigh; s++) if (w.web.tid[s] >= 2000 && w.web.type[s] !== 5) removeThread(w, w.web.tid[s], 4); // silk, not the branches it hung from
+  for (let i = 0; i < 60 * 4; i++) run.update(1 / 60, { mx: 0, my: 0 });
+  assert.ok(run.ghost, 'the torn web is ringed');
+  // Back on a branch (the spider fell with the web).
+  const back = w.web.nearestNode(site.x, site.y, 500, (s) => w.web.adj[s].length > 0 && w.web.kind[s] === 0);
+  placeAt(w, run.me(), back.id);
+  assert.equal(run.type, 4, 'and the orb is in hand');
+  assert.ok(heard.includes('ghost'));
+  // R spins it again where it hung.
+  run.respin(run.me());
+  for (let i = 0; i < 60 * 9; i++) run.update(1 / 60, { mx: 0, my: 0 });
+  assert.equal(run.ghost, null);
+  assert.ok(run.silkAround(run.lastOrb) > run.lastOrb.n0 * 0.5, 'the web is back');
 });

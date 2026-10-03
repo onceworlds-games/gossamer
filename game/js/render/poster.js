@@ -13,6 +13,7 @@ import { drawPrey, drawWasp, drawSpider, ball } from './creatures.js';
 import { drawWeb } from './webart.js';
 import { SILVER, AMBER, RUST, PAPER, rgba } from './palette.js';
 import { SERIF, glyph } from './hud.js';
+import { encodeSketch } from '../sim/sketch.js';
 
 export async function runPoster(kind) {
   document.body.style.background = '#08171a';
@@ -372,7 +373,7 @@ async function notebookPoster(canvas) {
   };
   const game = {
     me: 'me',
-    room: { state: { season: fakeSeason, result: { mid: 'x', t: { eaten: { gnat: 9, fly: 4, moth: 3, beetle: 1 }, rain: false, mist: true, gusts: 1, swoops: 1, stolen: 1, mantisOff: false, lostFood: 0 }, out: { moult: { me: 11 } } } }, players: new Map([['me', { id: 'me', name: 'You' }]]), host: 'me', match: { phase: 'lobby' } },
+    room: { state: { season: fakeSeason, result: { mid: 'x', sk: encodeSketch(w.web), t: { eaten: { gnat: 9, fly: 4, moth: 3, beetle: 1 }, rain: false, mist: true, gusts: 1, swoops: 1, stolen: 1, mantisOff: false, lostFood: 0 }, out: { moult: { me: 11 } } } }, players: new Map([['me', { id: 'me', name: 'You' }]]), host: 'me', match: { phase: 'lobby' } },
     season: () => fakeSeason,
     amHost: () => true,
     profile: { eggs: 0, unlocked: { species: ['orb', 'jumper'], gardens: ['cottage', 'reed'], colours: ['silver'], dews: ['round'], stickers: [] }, cold: 0, hatchlings: [], equip: { colour: 'silver' } },
@@ -381,6 +382,8 @@ async function notebookPoster(canvas) {
   };
   const nb = new Notebook(game);
   nb.mount(document.getElementById('ui'), false);
+  // The page runs on below the picture: let it fade out rather than stop mid-line.
+  nb.page.style.webkitMaskImage = nb.page.style.maskImage = 'linear-gradient(#000 84%, transparent)';
   setTimeout(() => (window.__posterReady = true), 600);
 }
 

@@ -58,7 +58,7 @@ export const PREY_KEYS = Object.keys(PREY);
 export const MAX_PREY = 70;
 
 // ---------------------------------------------------------------- hostiles
-export const WASP = { speed: 150, huntSpeed: 230, sting: 25, detect: 190, patrol: 48, cutTime: 0.45, hp: 2, stun: 2.5, loot: 300, carry: 5 };
+export const WASP = { speed: 150, huntSpeed: 230, sting: 25, detect: 190, patrol: 48, cutTime: 0.45, hp: 2, stun: 2.5, loot: 330, carry: 5 };
 export const WREN = { warn: 2.5, band: 86, damage: 55, cross: 0.75 };
 export const MANTIS = { speed: 52, reach: 74, damage: 40, windup: 0.95, climb: 12, falls: 3 };
 
@@ -66,7 +66,7 @@ export const MANTIS = { speed: 52, reach: 74, damage: 40, windup: 0.95, climb: 1
 // The three species. Speeds in px/s; silk regen per second while not spinning.
 export const SPECIES = {
   orb: { name: 'Orb Weaver', hp: 100, silk: 100, regen: 1.8, speed: 220, range: 520, leap: 260, castTime: 0.25 },
-  jumper: { name: 'Jumping Spider', hp: 100, silk: 40, regen: 2, speed: 165, run: 245, leap: 235, charge: 0.7, range: 0 },
+  jumper: { name: 'Jumping Spider', hp: 100, silk: 40, regen: 2, speed: 158, run: 235, leap: 235, charge: 0.7, range: 0 },
   bolas: { name: 'Bolas Spider', hp: 90, silk: 60, regen: 2.2, speed: 150, line: 72, fling: 190, range: 0 },
 };
 export const SPECIES_KEYS = Object.keys(SPECIES);

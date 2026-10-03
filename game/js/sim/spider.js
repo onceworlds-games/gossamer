@@ -245,6 +245,11 @@ export function startGlide(sp, x, y) {
 function glideStep(world, sp, dt) {
   const g = sp.glide;
   g.t += dt;
+  // The orb is no longer being spun (a new host took over mid-orb, say): go back to walking.
+  if (g.t > g.T + 0.4 && !sp.act) {
+    sp.glide = null;
+    return false;
+  }
   // The hub sags a little as the spokes go out: end where it really is.
   if (g.node) {
     const hp = world.web.pos(g.node);
