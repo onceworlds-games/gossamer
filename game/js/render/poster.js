@@ -159,7 +159,7 @@ function frame(w, sp, extra = {}) {
   const site = extra.site;
   const box = site ? { x0: site.x - site.r * 1.2, y0: site.y - site.r * 1.2, x1: site.x + site.r * 1.2, y1: site.y + site.r * 1.2 } : silkBox(w);
   const focus = { x: (box.x0 + box.x1) / 2 + (extra.dx ?? 0), y: (box.y0 + box.y1) / 2 + (extra.dy ?? 0) + 30, vx: 0, vy: 0 };
-  return { world: w, me: 'p', spiders: w.spiders, focus, box: extra.box ?? { x0: box.x0 - (extra.pad ?? 0), y0: box.y0, x1: box.x1 + (extra.pad ?? 0), y1: box.y1 }, q: 'high', hud: null, silk: extra.silk ?? 'silver', dewStyle: 'round', mist: extra.mist ?? 0 };
+  return { world: w, me: 'p', spiders: w.spiders, focus, box: extra.box ?? { x0: box.x0 - (extra.pad ?? 0), y0: box.y0, x1: box.x1 + (extra.pad ?? 0), y1: box.y1 }, q: 'high', hud: null, silk: extra.silk ?? 'silver', dewStyle: 'round', mist: extra.mist ?? 0, retreat: false };
 }
 
 const SCENES = {

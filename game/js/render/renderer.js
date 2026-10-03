@@ -81,7 +81,7 @@ export class Renderer {
     drawGardenBack(ctx, world, this.art, t, q);
     drawSurfaces(ctx, world, cam.z, q);
     drawDecor(ctx, world, t, q);
-    drawRetreat(ctx, world, t, v.spiders, false);
+    if (v.retreat !== false) drawRetreat(ctx, world, t, v.spiders, false);
     drawFireflies(ctx, world.lights, t, q);
     ctx.globalAlpha = v.webAlpha ?? 1;
     drawWeb(ctx, world, { z: cam.z, t, q, silk: v.silk, dewStyle: v.dewStyle });
@@ -97,7 +97,7 @@ export class Renderer {
       const anchor = sp.mode === 'hang' && sp.hang ? anchorPos(world, sp.hang.anchor) : null;
       drawSpider(ctx, world, sp, t, v.dt, { anchor, spin: sp.id === v.me ? v.spin : sp.spin });
     }
-    drawRetreat(ctx, world, t, v.spiders, true);
+    if (v.retreat !== false) drawRetreat(ctx, world, t, v.spiders, true);
     if (world.mantis) drawMantis(ctx, world.mantis, t);
     for (const p of prey) if (p.st === 'fly' && cam.visible(p.x, p.y)) drawPrey(ctx, p, t, q);
     for (const w of world.wasps ?? []) if (cam.visible(w.x, w.y)) drawWasp(ctx, w, t);
