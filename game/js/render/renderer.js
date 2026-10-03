@@ -8,7 +8,7 @@ import { drawFx, updateFx, rain as rainFx } from './fx.js';
 import { drawHud } from './hud.js';
 import { SILVER, AMBER, RUST, rgba } from './palette.js';
 import { anchorPos } from '../sim/spider.js';
-import { W, GROUND } from '../sim/data.js';
+import { W, GROUND, PREY } from '../sim/data.js';
 
 export class Renderer {
   constructor(canvas) {
@@ -89,6 +89,7 @@ export class Renderer {
     // The living: prey on the web first, spiders, then fliers and hunters on top.
     const prey = v.prey ?? world.prey;
     for (const p of prey) if (p.st !== 'fly' && p.st !== 'gone' && cam.visible(p.x, p.y)) drawPrey(ctx, p, t, q);
+    if (v.timers) this.timers(ctx, prey);
     drawLures(ctx, world.lures ?? [], world.balls ?? [], v.spiders, t);
     for (const sp of v.spiders) {
       if (!cam.visible(sp.x, sp.y, 80)) continue;
@@ -164,6 +165,19 @@ export class Renderer {
       ctx.lineWidth = lw * 1.5;
       ctx.beginPath();
       ctx.arc(sp.x, sp.y, r + 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * g.progress);
+      ctx.stroke();
+    }
+  }
+
+  /** Eight Eyes, third tier: how long each struggling catch has before it tears free. */
+  timers(ctx, prey) {
+    ctx.lineWidth = 2 / this.cam.z;
+    for (const p of prey) {
+      if (p.st !== 'stuck' || !(p.timer > 0)) continue;
+      const f = Math.min(1, p.timer / ((PREY[p.sp]?.escape ?? 6) * 1.2));
+      ctx.strokeStyle = f < 0.3 ? rgba(RUST, 0.9) : rgba(AMBER, 0.75);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 10 + (PREY[p.sp]?.size ?? 4) * 0.6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * f);
       ctx.stroke();
     }
   }

@@ -87,7 +87,7 @@ export function drawHud(ctx, h, w, ht, t) {
     const by = ht - (touch ? 132 : 34);
     if (touch) {
       glyph(ctx, h.type, cx, by, 1.3, SILVER);
-      text(ctx, TYPES[h.type], cx, by + 22, 15, rgba(SILVER, 0.85));
+      text(ctx, h.pattern ?? TYPES[h.type], cx, by + 22, 15, rgba(SILVER, 0.85));
     } else {
       for (let i = 0; i < n; i++) {
         const x = cx + (i - (n - 1) / 2) * gap;
@@ -101,7 +101,7 @@ export function drawHud(ctx, h, w, ht, t) {
         glyph(ctx, i, x, by - 6, 1, on ? SILVER : rgba(SILVER, 0.45));
         text(ctx, `${i + 1}`, x, by + 13, 12, on ? AMBER : rgba(SILVER, 0.45), 'center', 600);
       }
-      text(ctx, TYPES[h.type], cx, by - 34, 15, rgba(SILVER, 0.75));
+      text(ctx, h.pattern ?? TYPES[h.type], cx, by - 34, 15, rgba(SILVER, 0.75));
     }
   }
   // ---- warnings at the edges

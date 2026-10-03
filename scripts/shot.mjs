@@ -12,7 +12,7 @@ b.on((m) => {
   if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails?.exception?.description ?? m.params.exceptionDetails?.text);
   if (m.method === 'Runtime.consoleAPICalled' && ['error', 'warning'].includes(m.params.type)) errors.push(`${m.params.type}: ${m.params.args?.map((a) => a.value ?? a.description).join(' ')}`);
 });
-await b.send('Page.navigate', { url: `http://127.0.0.1:${port}/index.html?test=${process.env.TEST ?? 'bot'}` });
+await b.send('Page.navigate', { url: `http://127.0.0.1:${port}/index.html?test=${process.env.TEST ?? 'bot'}${process.env.Q ? `&${process.env.Q}` : ''}` });
 await sleep(2500);
 let n = 0;
 for (const step of steps.length ? steps : ['shot']) {

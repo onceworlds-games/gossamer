@@ -144,6 +144,12 @@ export class Notebook {
 
   setup(col, s) {
     const g = this.game;
+    col.append(label('This season'));
+    const modes = div('specimens');
+    modes.append(specimen(div('numeral', 'X'), 'Ten nights', '', s.mode !== 'daily', false, () => s.mode === 'daily' && g.request(g.me, { t: 'newseason', start: true })));
+    modes.append(specimen(div('numeral', '1'), 'Daily garden', '', s.mode === 'daily', false, () => s.mode !== 'daily' && g.request(g.me, { t: 'newseason', start: true, daily: dailyOf(platform.now()) })));
+    col.append(modes);
+    if (s.mode === 'daily') return;
     col.append(label('Garden'));
     const row = div('specimens');
     for (const id of GARDEN_KEYS) {

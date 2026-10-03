@@ -73,7 +73,7 @@ test('fuzz: any commands from any spider, thousands of ticks, nothing breaks', (
     const garden = GARDEN_KEYS[round % 4];
     const species = ['orb', 'jumper', 'bolas'];
     const players = [0, 1, 2].map((i) => ({ id: `s${i}`, sp: species[(i + round) % 3], up: { venom: 2, shake: 1, templates: 3 }, tr: ['fierce', 'balloon'] }));
-    const w = createWorld({ seed: mix(round, 9), night: 3 + round * 2, garden, players });
+    const w = createWorld({ seed: mix(round, 9), night: [3, 5, 7, 10, 11, 15][round], garden, players, mode: round > 3 ? 'endless' : 'season' });
     const junk = [NaN, Infinity, -Infinity, 1e12, -5, 'x', null, undefined, {}];
     for (let tick = 0; tick < 3500; tick++) {
       const inputs = {};
@@ -171,4 +171,32 @@ test('commands are checked: wrong species, no silk, too far and out-of-world tar
   w.ev = [];
   command(w, { id: 'nobody', t: 'cast', type: 0, x: s.x, y: s.y });
   assert.equal(w.ev.length, 0);
+});
+
+test('the mantis climbs and hunts, and leaves after three venom bites', async () => {
+  const { spawnMantis, biteMantis } = await import('../game/js/sim/hostiles.js');
+  const w = createWorld({ seed: 2026, night: 10, garden: 'cottage', players: [{ id: 'a', sp: 'orb', up: { venom: 3 } }] });
+  w.script.events = [];
+  const bot = makeBot(w, 'a', 'good');
+  for (let i = 0; i < 60 * 15; i++) stepWorld(w, { a: botTick(w, bot, 1 / 60) });
+  const m = spawnMantis(w);
+  let moved = 0;
+  let last = { x: m.x, y: m.y };
+  for (let i = 0; i < 60 * 30; i++) {
+    stepWorld(w, { a: botTick(w, bot, 1 / 60) });
+    moved += Math.hypot(m.x - last.x, m.y - last.y);
+    last = { x: m.x, y: m.y };
+    assert.ok(Number.isFinite(m.x) && Number.isFinite(m.y));
+  }
+  assert.ok(moved > 50, `the mantis moves (${moved | 0} px)`);
+  // Three venom bites from close by send it away.
+  const sp = w.spiders[0];
+  for (let k = 0; k < 3; k++) {
+    sp.x = m.x;
+    sp.y = m.y;
+    m.st = 'hunt';
+    biteMantis(w, sp);
+  }
+  assert.equal(m.st, 'leave');
+  assert.ok(w.tally.mantisOff);
 });

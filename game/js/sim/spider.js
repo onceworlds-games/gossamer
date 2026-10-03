@@ -606,11 +606,20 @@ export function upkeep(world, sp, dt) {
   if (sp.invuln > 0) sp.invuln -= dt;
   const rn = world.web.pos(retreatNode(g));
   sp.inRetreat = !!rn && sp.mode === 'walk' && Math.hypot(sp.x - rn.x, sp.y - rn.y) < 18;
-  sp.hidden = sp.inRetreat || inCover(g, sp.x, sp.y);
+  sp.hidden = sp.inRetreat || inCover(g, sp.x, sp.y) || inHollow(world, sp);
   if (sp.inRetreat && sp.mode !== 'downed') sp.hp = Math.min(SPECIES[sp.sp].hp, sp.hp + RETREAT_HEAL * dt);
   if (sp.mode === 'air' || sp.mode === 'hang') sp.hidden = false;
   if (!Number.isFinite(sp.silk)) sp.silk = 0;
   if (!Number.isFinite(sp.hp)) sp.hp = 1;
+}
+
+/** Sitting in a funnel web's hollow. */
+function inHollow(world, sp) {
+  for (const id of world.hollows ?? []) {
+    const p = world.web.pos(id);
+    if (p && Math.hypot(p.x - sp.x, p.y - sp.y) < 16) return true;
+  }
+  return false;
 }
 
 export function hurt(world, sp, amount, why) {

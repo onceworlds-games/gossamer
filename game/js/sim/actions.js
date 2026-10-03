@@ -599,6 +599,8 @@ export function runActions(world, sp, dt) {
             placeAt(world, sp, act.hub);
             world.ev.push({ k: 'place', id: sp.id, node: act.hub });
             world.ev.push({ k: 'orbdone', id: sp.id, hub: act.hub, x: sp.x, y: sp.y, quick: true, partial: act.i < act.steps.length });
+            // A funnel's hub is a hollow to hide in from the wren and the wasps.
+            if (act.plan.pattern === 'funnel') world.hollows.push(act.hub);
           }
           sp.regenDelay = 1.5;
         }

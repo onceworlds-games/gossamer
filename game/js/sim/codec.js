@@ -34,7 +34,7 @@ function packSpider(sp) {
 export function packWorld(w) {
   const meta = {
     t: r1(w.t), tick: w.tick, phase: w.phase, si: w.si, rng: w.rng.s, nextId: w.nextId, food: r1(w.food), done: w.done,
-    tally: w.tally, hubs: w.hubs, quick: [...w.quickHubs],
+    tally: w.tally, hubs: w.hubs, quick: [...w.quickHubs], hollows: w.hollows,
     weather: { ...w.weather, windX: r1(w.weather.windX), sway: Math.round(w.weather.sway * 1000) / 1000, gust: w.weather.gust },
     lights: w.lights.map((l) => [ri(l.x), ri(l.y), r1(l.power)]),
     spiders: w.spiders.map(packSpider),
@@ -72,6 +72,7 @@ export function unpackWorld(w, ck, poses = null, keep = null) {
     if (m.tally && typeof m.tally === 'object') w.tally = { ...w.tally, ...m.tally };
     if (m.hubs && typeof m.hubs === 'object') w.hubs = m.hubs;
     if (Array.isArray(m.quick)) w.quickHubs = new Set(m.quick);
+    if (Array.isArray(m.hollows)) w.hollows = m.hollows.filter(Number.isInteger).slice(0, 12);
     if (m.weather && typeof m.weather === 'object') Object.assign(w.weather, m.weather);
     if (Array.isArray(m.lights)) m.lights.forEach((l, i) => w.lights[i] && Array.isArray(l) && Object.assign(w.lights[i], { x: Number(l[0]) || w.lights[i].x, y: Number(l[1]) || w.lights[i].y, power: Number(l[2]) || w.lights[i].power }));
     if (Array.isArray(m.spiders)) {
@@ -146,7 +147,7 @@ export function snapshot(w) {
     t: r1(w.t),
     f: r1(w.food),
     ph: w.phase,
-    p: w.prey.map((p) => [p.id, PREY_KEYS.indexOf(p.sp), ST.indexOf(p.st), ri(p.x), ri(p.y), ri(p.vx), ri(p.vy), p.node, Math.round(p.wrap * 100), p.big ? 1 : 0, p.facing, p.heldBy ?? 0]),
+    p: w.prey.map((p) => [p.id, PREY_KEYS.indexOf(p.sp), ST.indexOf(p.st), ri(p.x), ri(p.y), ri(p.vx), ri(p.vy), p.node, Math.round(p.wrap * 100), p.big ? 1 : 0, p.facing, p.heldBy ?? 0, p.st === 'stuck' ? r1(p.timer) : 0]),
     w: w.wasps.map((x) => [x.id, ri(x.x), ri(x.y), ri(x.vx), ri(x.vy), x.st]),
     r: w.wren ? [w.wren.st, r1(w.wren.t), ri(w.wren.x), ri(w.wren.y), w.wren.dir, w.wren.warn, w.wren.band] : 0,
     m: w.mantis ? [ri(w.mantis.x), ri(w.mantis.y), w.mantis.st, r1(w.mantis.facing ?? 0)] : 0,
@@ -179,7 +180,7 @@ export function applySnapshot(w, s, myId) {
     // Remember where it was, so it can be drawn sliding between snapshots.
     p.px = p.x ?? num(a[3]);
     p.py = p.y ?? num(a[4]);
-    Object.assign(p, { sp, st, x: num(a[3]), y: num(a[4]), vx: num(a[5]), vy: num(a[6]), node: num(a[7]), wrap: num(a[8]) / 100, big: !!a[9], facing: num(a[10], 1) >= 0 ? 1 : -1, heldBy: typeof a[11] === 'string' ? a[11] : null, food: PREY[sp]?.food ?? 1, snapT: 0 });
+    Object.assign(p, { sp, st, x: num(a[3]), y: num(a[4]), vx: num(a[5]), vy: num(a[6]), node: num(a[7]), wrap: num(a[8]) / 100, big: !!a[9], facing: num(a[10], 1) >= 0 ? 1 : -1, heldBy: typeof a[11] === 'string' ? a[11] : null, food: PREY[sp]?.food ?? 1, timer: Math.max(0, Math.min(30, num(a[12]))), snapT: 0 });
     out.push(p);
   }
   w.prey = out;

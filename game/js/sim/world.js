@@ -65,6 +65,7 @@ export function createWorld(cfg) {
     tally: { caught: {}, eaten: {}, escaped: {}, stolen: 0, snaps: 0, swoops: 0, gusts: 0, rain: false, mist: false, mantisOff: false },
     hubs: {},
     quickHubs: new Set(),
+    hollows: [],
     stickFactor: 1,
     solid: new Set(garden.solidThreads ?? []),
     nextId: 1,

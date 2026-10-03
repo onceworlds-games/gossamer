@@ -211,6 +211,14 @@ export class Game {
     if (!s) {
       const saved = this.savedSeason && !this.savedSeason.over ? this.savedSeason : null;
       s = saved ?? newSeason({ mode: this.profile.tutorial ? 'season' : 'tutorial', seed: (Date.now() ^ hash(this.me)) >>> 0 });
+      // Local checks only (?test&night=7&garden=reed&sp=jumper): start a season further on.
+      const q = this.test ? new URLSearchParams(location.search) : null;
+      if (q?.get('night')) {
+        s.mode = 'season';
+        s.night = Math.max(1, Math.min(20, Number(q.get('night')) || 1));
+      }
+      if (q?.get('garden') && GARDENS[q.get('garden')]) s.garden = q.get('garden');
+      if (q?.get('sp') && SPECIES[q.get('sp')]) this.profile.lastSpecies = q.get('sp');
       const hatch = this.profile.hatchlings.shift();
       ensureRoster(s, this.me, this.profile.lastSpecies ?? 'orb', { trait: hatch });
       if (hatch) this.markDirty();
@@ -268,7 +276,7 @@ export class Game {
         changed = from === this.me && lobby && goEndless(s);
         break;
       case 'newseason':
-        if (from === this.me && lobby && s.over) {
+        if (from === this.me && lobby && (s.over || (req.start && s.night === 1 && !s.history.length))) {
           const fresh = newSeason({ mode: req.daily ? 'daily' : 'season', garden: req.daily ? req.daily.garden : s.garden, cold: s.cold, seed: req.daily ? req.daily.seed : (Date.now() ^ hash(this.me)) >>> 0, daily: req.daily ?? null });
           for (const [id, r] of Object.entries(s.roster)) {
             if (!this.room.players.has(id)) continue;
@@ -401,7 +409,7 @@ export class Game {
     const me = this.run?.me();
     if (!me || this.room.spectating || this.screen !== 'night') return platform.controls.set(null);
     const act = this.run.actLabel();
-    const type = ['Frame', 'Radial', 'Sticky', 'Alarm', 'Orb'][this.run.type];
+    const type = this.run.type === 4 ? ({ orb: 'Orb', ladder: 'Ladder', funnel: 'Funnel', dense: 'Close orb' }[this.run.pattern ?? 'orb'] ?? 'Orb') : ['Frame', 'Radial', 'Sticky', 'Alarm'][this.run.type];
     const key = `${me.sp}:${act}:${type}`;
     if (key === this.controlsKey) return;
     this.controlsKey = key;
@@ -588,6 +596,7 @@ export class Game {
       aim,
       hud: run.hud(touch, { watching: this.room.spectating || !run.myId, mates: this.net.mates(run), hint: hint?.text, hintA: hint?.a ?? 0 }),
       gauges: run.gauges(),
+      timers: (run.me()?.mods?.eyes ?? 0) >= 3,
       sense: run.feel(),
       pings: run.pings,
       silk: this.profile.equip.colour,

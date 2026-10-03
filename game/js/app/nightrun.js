@@ -10,6 +10,7 @@ import * as fx from '../render/fx.js';
 import { TYPES } from '../render/hud.js';
 
 const TYPE_TO_THREAD = [0, 1, 2, 3];
+const PATTERN_NAMES = { orb: 'Orb', ladder: 'Ladder', funnel: 'Funnel', dense: 'Close orb' };
 const REFUSE = { far: 'Too far', near: 'Too close', silk: 'No silk', full: 'Web full', nothing: 'Nothing there', same: 'Already joined', busy: 'Busy', open: 'Too open', species: 'Not this spider' };
 
 export class NightRun {
@@ -68,10 +69,15 @@ export class NightRun {
       };
       switch (e.t) {
         case 'type':
-          if (me.sp === 'orb') this.setType(Math.max(0, Math.min(4, e.n)));
+          // Pressing 5 again turns through the web patterns you have.
+          if (me.sp === 'orb' && e.n === 4 && this.type === 4) this.nextPattern(me);
+          else if (me.sp === 'orb') this.setType(Math.max(0, Math.min(4, e.n)));
           break;
         case 'cycle':
-          if (me.sp === 'orb') this.setType((this.type + 1) % 5);
+          if (me.sp !== 'orb') break;
+          if (this.type === 4 && this.nextPattern(me, true)) break;
+          this.setType((this.type + 1) % 5);
+          if (this.type === 4) this.pattern = 'orb';
           break;
         case 'tap': {
           const p = toWorld(e.sx, e.sy);
@@ -122,6 +128,16 @@ export class NightRun {
           break;
       }
     }
+  }
+
+  /** The next Quick Orb pattern this spider has; false if it was the last one (so a cycle moves on). */
+  nextPattern(me, stopAtEnd = false) {
+    const list = patternsFor(me.mods.templates);
+    const i = list.indexOf(this.pattern ?? 'orb');
+    if (stopAtEnd && i >= list.length - 1) return false;
+    this.pattern = list[(i + 1) % list.length];
+    this.audio?.ui('type');
+    return true;
   }
 
   setType(n) {
@@ -463,6 +479,7 @@ export class NightRun {
       quota: w.quota,
       types: me?.sp === 'orb' && !extra.watching,
       type: this.type,
+      pattern: this.type === 4 ? PATTERN_NAMES[this.pattern ?? 'orb'] : null,
       mates: extra.mates ?? [],
       edges,
       notes,
