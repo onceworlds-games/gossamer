@@ -298,7 +298,15 @@ export function startOrb(world, sp, hx, hy, r, pattern) {
   if (!patternsFor(sp.mods.templates).includes(pattern)) pattern = 'orb';
   if (!Number.isFinite(hx) || !Number.isFinite(hy)) return false;
   if (Math.hypot(hx - sp.x, hy - sp.y) > sp.mods.range) return refuse(world, sp, 'far');
-  const plan = fitOrb(world.web, hx, hy, r, pattern, sp.mods.range, sp.silk);
+  let plan = fitOrb(world.web, hx, hy, r, pattern, sp.mods.range, sp.silk);
+  // The first night teaches the Quick Orb, not thrift: its first web is always affordable.
+  if (!plan.ok && plan.why === 'silk' && world.rules.gentle && !sp.gifted) {
+    plan = fitOrb(world.web, hx, hy, r, pattern, sp.mods.range, sp.mods.maxSilk);
+    if (plan.ok) {
+      sp.gifted = true;
+      sp.silk = Math.max(sp.silk, plan.cost + 2);
+    }
+  }
   if (!plan.ok) return refuse(world, sp, plan.why === 'silk' ? 'silk' : 'open');
   if (world.web.playerNodes + 60 > PLAYER_NODES || world.web.playerThreads + 70 > PLAYER_THREADS) return refuse(world, sp, 'full');
   sp.act = { k: 'orb', plan, steps: orbSteps(plan), i: 0, timer: 0.1, hub: 0, spokes: {}, at: null };
