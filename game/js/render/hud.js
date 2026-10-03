@@ -5,6 +5,8 @@ import { SILVER, AMBER, RUST, PAPER, rgba } from './palette.js';
 export const SERIF = '"EB Garamond", "Iowan Old Style", Georgia, serif';
 export const SCRIPT = '"Cedarville Cursive", "Segoe Script", cursive';
 const TYPES = ['Frame', 'Radial', 'Sticky', 'Alarm', 'Orb'];
+// The danger red, lifted to read on the dark garden (the notebook keeps the deeper one).
+const DANGER = '#e0765a';
 
 function text(ctx, s, x, y, size, color, align = 'center', weight = 600, font = SERIF) {
   ctx.font = `${weight} ${size}px ${font}`;
@@ -107,7 +109,8 @@ export function drawHud(ctx, h, w, ht, t) {
   // ---- a hint, low and centred, in the notebook hand
   if (h.hint && h.hintA > 0.01) {
     ctx.globalAlpha = h.hintA;
-    text(ctx, h.hint, cx, ht * (touch ? 0.62 : 0.7), Math.max(22, Math.min(30, w / 22)), PAPER, 'center', 400, SCRIPT);
+    // Up in the sky, under the clock: the web and the thumbs both stay clear of it.
+    text(ctx, h.hint, cx, Math.max(104, ht * 0.2), Math.max(22, Math.min(30, w / 22)), PAPER, 'center', 400, SCRIPT);
     ctx.globalAlpha = 1;
   }
   if (h.big) {
@@ -133,7 +136,7 @@ function edgeMark(ctx, e, w, h, t) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(a);
-  ctx.fillStyle = e.urgent ? rgba(RUST, pulse) : rgba(e.warm ? AMBER : SILVER, 0.75 * pulse);
+  ctx.fillStyle = e.urgent ? rgba(DANGER, pulse) : rgba(e.warm ? AMBER : SILVER, 0.75 * pulse);
   ctx.beginPath();
   ctx.moveTo(12, 0);
   ctx.lineTo(-6, -8);
@@ -142,7 +145,7 @@ function edgeMark(ctx, e, w, h, t) {
   ctx.closePath();
   ctx.fill();
   ctx.restore();
-  if (e.label) text(ctx, e.label, x - Math.cos(a) * 26, y - Math.sin(a) * 18, 14, e.urgent ? RUST : rgba(SILVER, 0.85));
+  if (e.label) text(ctx, e.label, x - Math.cos(a) * 26, y - Math.sin(a) * 18, 15, e.urgent ? DANGER : rgba(SILVER, 0.85));
 }
 
 /** Small drawings of each thread kind (and the Quick Orb), used in the HUD and the notebook. */

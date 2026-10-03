@@ -8,6 +8,7 @@
     "dev": "node scripts/serve.mjs",
     "test": "node --test \"test/*.test.mjs\"",
     "balance": "node scripts/balance.mjs",
+    "feel": "node scripts/feel.mjs",
     "store": "node scripts/store.mjs",
     "smoke": "node scripts/smoke.mjs"
   },

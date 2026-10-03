@@ -85,6 +85,8 @@ export class Input {
     }
     if (['tab', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
     if (down) {
+      // A shortcut of the browser's (Ctrl+R, Cmd+F...) is not a move of the spider's.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (this.keys.has(k) && e.repeat) return;
       this.keys.add(k);
       if (e.repeat) return;

@@ -599,8 +599,9 @@ export function drawMantis(ctx, m, t) {
   const dir = Math.cos(m.facing ?? 0) >= 0 ? 1 : -1;
   const raise = m.st === 'windup' ? 1 : 0;
   ctx.save();
-  ctx.translate(m.x, m.y - 10);
-  ctx.scale(dir, 1);
+  ctx.translate(m.x, m.y - 14);
+  // The finale's beast: nearly twice a spider's length, so its strike (74 px) is a reach you can see.
+  ctx.scale(dir * 1.9, 1.9);
   const col = '#8eaa9c';
   ctx.strokeStyle = col;
   ctx.lineCap = 'round';

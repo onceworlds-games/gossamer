@@ -7,7 +7,8 @@ Play it at [onceworlds.com/play/gossamer](https://onceworlds.com/play/gossamer).
 ## How to play
 
 Each night starts at dusk. Walk the branches and your own silk, throw threads between twigs, rails and stems, and
-spin a web across the path the prey take (the notebook's forecast tells you what the night holds). Sticky silk
+spin a web across the path the prey take: at dusk the lanes they fly shimmer faintly in the air, and the notebook's
+forecast tells you what the night holds. Sticky silk
 catches; dry frame and radial silk is strong and only bounces things. Everything that touches the web plucks it, and
 you hear the note and see it run along the threads: long frame lines boom low, gnats are glitter.
 
@@ -34,6 +35,9 @@ one of three traits. Ten nights make a season.
 | Shift | Run (hunter) | Hurry (louder) |
 | Tab, mouse wheel | Two-finger tap, drag | Ping a spot for friends; zoom / pan |
 
+On a phone the stick and the buttons cover the lower corners (a tap there steers or presses, never casts): drag with
+two fingers to bring a twig out from under them, and use the + and - buttons to zoom.
+
 ## What's in it
 
 - **A real web.** Knots and threads are simulated (verlet points with soft distance constraints at 60 Hz). Threads
@@ -51,15 +55,18 @@ one of three traits. Ten nights make a season.
 - **Twelve upgrades** of three tiers, **twenty-four traits**, Quick Orb patterns (orb, ladder, funnel, close-woven).
 - **Modes**: the ten-night season, Endless after it, the Daily Garden (one seeded night), and Cold Snap levels 1-5
   (each adds a rule) after a finished season.
-- **The notebook**: egg points from each season buy gardens, silk colours, dew styles, stickers for its pages and
-  hatchlings (start a season with a trait already pinned).
+- **The notebook**: it tells you what the night came to (and why a hungry one was), draws the fullest your web got in
+  ink, and lets you spend moult. Egg points from each season buy gardens, silk colours, dew styles, stickers for its
+  pages and hatchlings (start a season with a trait already pinned).
+- **Quick rebuild**: when the wren (or a wasp) takes most of your last Quick Orb, its place is ringed and the orb is in
+  hand: tap the ring, or press R, and it is spun again where it hung.
 
 ## Playing together
 
 It's a friends game for up to four: everyone shares one garden, one web and one quota, and each plays their own
 spider (any species). The host's page runs the night and checks every action; everyone else moves their own spider,
 sends what they do, and draws a copy of the web that follows the host's. The night is the room's match and the
-notebook is its lobby; friends who arrive at dusk are let in, later ones watch. A reload, a dropped connection or the
+notebook is its lobby; a friend who arrives at dusk picks a spider and is let in, later ones watch. A reload, a dropped connection or the
 host leaving doesn't stop the night: the host writes a checkpoint every two seconds and whoever takes over carries on.
 
 ## How it's built
@@ -82,7 +89,8 @@ No build step: plain ES modules and Canvas 2D in `game/`, which is what's publis
 ```
 npm run dev        # http://127.0.0.1:8090 (the game alone; add ?test=bot for an autopilot night)
 npm test           # unit, property and fuzz tests
-npm run balance    # the balance harness (bots across seeds), about two minutes
+npm run balance    # the balance harness (bots across seeds), about five minutes (ORB_SPACING=20 tries another spiral)
+npm run feel       # how building feels in numbers: aim accuracy, caps, silk, a web by hand against a Quick Orb
 npm run store      # recapture store/ from the game's own poster scenes
 ```
 

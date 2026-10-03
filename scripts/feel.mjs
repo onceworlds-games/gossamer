@@ -93,44 +93,42 @@ function capTest() {
   const rng = makeRng(7);
   const anchors = [];
   for (let s = 0; s < web.nodeHigh; s++) if (web.nid[s] >= 0 && web.nid[s] < 2000 && web.adj[s].length > 0) anchors.push(web.nid[s]);
-  let orbs = 0;
-  let casts = 0;
-  let firstFull = null;
   const refusals = {};
-  for (let guard = 0; guard < 400; guard++) {
-    const site = w.garden.sites[guard % w.garden.sites.length];
-    const from = web.nearestNode(site.x, site.y, 500, (s) => web.adj[s].length > 0 && web.kind[s] === 0);
-    if (from) placeAt(w, sp, from.id);
-    w.ev = [];
-    command(w, { id: 'a', t: 'orb', x: site.x + (rand(rng) - 0.5) * 40, y: site.y + (rand(rng) - 0.5) * 40, r: 95, p: 'orb' });
-    for (let i = 0; i < 60 * 9 && (sp.act || i < 2); i++) {
-      stepWorld(w, {});
-      for (const e of w.ev) if (e.k === 'refuse') refusals[e.why] = (refusals[e.why] ?? 0) + 1;
-    }
-    if (sp.act === null && w.ev.every((e) => e.k !== 'orbstart') && refusals.full) break;
-    orbs++;
-    if (refusals.full && !firstFull) firstFull = { orbs, nodes: web.playerNodes, threads: web.playerThreads };
-    if (orbs > 40) break;
-  }
-  const before = { n: web.playerNodes, t: web.playerThreads };
-  // After the last orb: single casts keep going until the caps.
-  for (let k = 0; k < 600; k++) {
-    const a = anchors[Math.floor(rand(rng) * anchors.length)];
-    const p = web.pos(a);
-    const from = web.nearestNode(p.x, p.y, 700, (s) => web.adj[s].length > 0 && web.kind[s] === 0);
-    if (from) placeAt(w, sp, from.id);
-    w.ev = [];
-    const b = anchors[Math.floor(rand(rng) * anchors.length)];
-    const q = web.pos(b);
-    command(w, { id: 'a', t: 'cast', type: 2, x: q.x, y: q.y });
+  // Events of a tick land in world.out: ask through the command queue and read them from there.
+  const ask = (c) => {
+    w.out = [];
+    w.cmds.push({ id: 'a', ...c });
     for (let i = 0; i < 30; i++) stepWorld(w, {});
+    for (const e of w.out) if (e.k === 'refuse') refusals[e.why] = (refusals[e.why] ?? 0) + 1;
+    return w.out;
+  };
+  const castBetween = (type) => {
+    const a = web.pos(anchors[Math.floor(rand(rng) * anchors.length)]);
+    const from = web.nearestNode(a.x, a.y, 700, (s) => web.adj[s].length > 0 && web.kind[s] === 0);
+    if (from) placeAt(w, sp, from.id);
+    const b = web.pos(anchors[Math.floor(rand(rng) * anchors.length)]);
+    return ask({ t: 'cast', type, x: b.x, y: b.y }).some((e) => e.k === 'cast');
+  };
+  // Throw strands until the web says it is full.
+  let casts = 0;
+  for (let k = 0; k < 4000 && !refusals.full; k++) {
+    castBetween(k % 3 === 0 ? 2 : 1);
     casts++;
-    for (const e of w.ev) if (e.k === 'refuse') refusals[e.why] = (refusals[e.why] ?? 0) + 1;
-    if (web.playerNodes + 3 > PLAYER_NODES || web.playerThreads + 2 > PLAYER_THREADS) break;
   }
+  const atFull = { nodes: web.playerNodes, threads: web.playerThreads };
+  // A Quick Orb is refused the same way, with the same word.
+  const site = w.garden.sites[0];
+  const orbWhy = ask({ t: 'orb', x: site.x, y: site.y, r: 95, p: 'orb' }).find((e) => e.k === 'refuse')?.why ?? 'spun anyway';
+  // Cutting makes room again.
+  const before = web.playerThreads;
+  const mid = web.nearestThread(sp.x, sp.y, 200, (s) => web.type[s] !== 5);
+  if (mid) ask({ t: 'cut', x: mid.x, y: mid.y });
+  const cutFreed = before - web.playerThreads;
+  let again = false;
+  for (let k = 0; k < 40 && !again; k++) again = castBetween(1);
   table('Thread caps (300 knots, 400 threads for the players)', [
-    ['Quick Orbs spun before one is refused', 'knots / threads then', 'then single casts until', 'refusals seen'],
-    [orbs, `${before.n} / ${before.t}`, `${web.playerNodes} / ${web.playerThreads} (${casts} casts)`, JSON.stringify(refusals)],
+    ['strands thrown before "Web full"', 'knots / threads then', 'a Quick Orb then is', 'one cut frees', 'then a cast works'],
+    [casts, `${atFull.nodes} / ${atFull.threads}`, `refused: ${orbWhy}`, `${cutFreed} thread${cutFreed === 1 ? '' : 's'}`, again ? 'yes' : 'no'],
   ]);
 }
 
@@ -193,12 +191,12 @@ function manualOrb(seed, think, rings) {
   };
   const cast = (type, x, y) => {
     wait(think); // looking, deciding, aiming
-    w.ev = [];
-    command(w, { id: 'a', t: 'cast', type, x, y });
+    w.out = [];
+    w.cmds.push({ id: 'a', t: 'cast', type, x, y });
     stepWorld(w, {});
     clock += 1 / 60;
     casts++;
-    if (w.ev.some((e) => e.k === 'refuse')) refused++;
+    if (w.out.some((e) => e.k === 'refuse')) refused++;
     settle();
   };
   // 1. A frame across the site, from the first rim anchor to the opposite one, then onto its middle: the hub.

@@ -388,7 +388,7 @@ export class NightRun {
           fx.silk(e.x - 6, e.y, e.x + 6, e.y, 6);
           break;
         case 'refuse':
-          if (mine) this.note(REFUSE[e.why] ?? 'No', e.x, e.y - 34, '#a9442c');
+          if (mine) this.note(REFUSE[e.why] ?? 'No', e.x, e.y - 34, '#e0765a');
           break;
         case 'hurt':
           if (mine) {
@@ -431,7 +431,7 @@ export class NightRun {
           if (mine) this.note('Perfect radials', e.x, e.y - 60, '#f0a33c');
           break;
         case 'downed':
-          if (mine) this.bigText('Down', '', 2.5, '#a9442c');
+          if (mine) this.bigText('Down', '', 2.5, '#e0765a');
           break;
         case 'dawn':
           this.bigText('Dawn', '', 3, '#f0a33c');
