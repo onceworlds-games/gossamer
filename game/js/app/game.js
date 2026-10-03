@@ -14,7 +14,7 @@ import { newSeason, parseSeason, ensureRoster, applyNight, buy, pickTrait, setSp
 import { parseProfile, recordNight, recordSeason, checkUnlocks } from '../sim/profile.js';
 import { tally } from '../sim/night.js';
 import { packWorld, unpackWorld } from '../sim/codec.js';
-import { SPECIES, GARDENS } from '../sim/data.js';
+import { SPECIES, GARDENS, T_SURFACE } from '../sim/data.js';
 
 const DAWN_HOLD = 4.5;
 
@@ -509,14 +509,27 @@ export class Game {
 
   // ---------------------------------------------------------------- per frame
   makeAttract() {
-    const seed = (Date.now() / 86400000) | 0;
-    const cfg = { seed: mix(seed, 77), night: 4, garden: 'cottage', mode: 'practice', players: [{ id: 'attract', sp: 'orb' }] };
+    // The title's garden is the cover's night: a full, even orb on the main lane, dewy, with a spider that lives in
+    // it (a bot) while the night goes on.
+    const cfg = { seed: 253408, night: 5, garden: 'cottage', mode: 'practice', players: [{ id: 'attract', sp: 'orb', up: { strong: 2 } }] };
     this.attract = new NightRun(cfg, { role: 'host', myId: null, renderer: this.renderer, audio: null });
-    const bot = makeBot(this.attract.world, 'attract', 'good');
-    this.attract.bots = [{ id: 'attract', tick: (w, dt) => botTick(w, bot, dt) }];
-    // Give it a head start so the title shows a web.
-    for (let i = 0; i < 60 * 14; i++) this.attract.update(1 / 60, { mx: 0, my: 0 });
-    this.attract.world.out.length = 0;
+    const w = this.attract.world;
+    // Prey and weather only: no hunters on the title.
+    w.script.events = w.script.events.filter((e) => !['wasp', 'wren', 'mantis', 'gust', 'gustwarn'].includes(e.k));
+    const sp = w.spiders[0];
+    const mods = { ...sp.mods };
+    Object.assign(sp.mods, { maxSilk: 400, range: 2000 });
+    sp.silk = 400;
+    w.cmds.push({ id: 'attract', t: 'orb', x: 479, y: 429, r: 115, p: 'orb' });
+    for (let i = 0; i < 60 * 9; i++) this.attract.update(1 / 60, { mx: 0, my: 0 });
+    Object.assign(sp.mods, mods);
+    sp.silk = Math.min(sp.silk, sp.mods.maxSilk);
+    const web = w.web;
+    for (let s = 0; s < web.threadHigh; s++) if (web.tid[s] >= 0 && web.type[s] !== T_SURFACE) web.dew[s] = Math.min(40, (web.len[s] / 7) * 0.5);
+    const bot = makeBot(w, 'attract', 'good');
+    this.attract.bots = [{ id: 'attract', tick: (wd, dt) => botTick(wd, bot, dt) }];
+    for (let i = 0; i < 60 * 4; i++) this.attract.update(1 / 60, { mx: 0, my: 0 });
+    w.out.length = 0;
   }
 
   frame(dt) {
@@ -618,7 +631,11 @@ export class Game {
   drawAttract(dt) {
     const run = this.attract;
     if (!run) return;
-    const sp = run.world.spiders[0];
+    // Frame the orb beside the title on wide screens and above it on tall ones; its spider comes and goes.
+    const cam = this.renderer.cam;
+    const wide = cam.sw > cam.sh;
+    const ox = (wide ? -0.28 * cam.sw : 0) / cam.z;
+    const oy = (wide ? -0.02 * cam.sh : -0.25 * cam.sh) / cam.z;
     this.renderer.draw({
       world: run.world,
       me: null,
@@ -626,7 +643,8 @@ export class Game {
       t: run.t,
       dt,
       q: this.quality,
-      focus: { x: sp.x, y: sp.y - 40, vx: 0, vy: 0 },
+      focus: { x: 479 - ox, y: 429 - oy, vx: 0, vy: 0 },
+      box: null,
       reduced: this.reduced,
       hud: null,
       silk: this.profile?.equip.colour,

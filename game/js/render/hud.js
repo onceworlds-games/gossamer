@@ -80,31 +80,26 @@ export function drawHud(ctx, h, w, ht, t) {
     ctx.fillRect(rx - 8, ly - 4, 7, 7 * Math.max(0.05, m.hp / 100));
     ly += 20;
   }
-  // ---- thread in hand (orb weaver): a row of glyphs with their keys, bottom centre
-  if (h.types) {
+  // ---- thread in hand (orb weaver): a row of glyphs with their keys in the lower left, out of the middle of the
+  // night. On touch the thread button already names it.
+  if (h.types && !touch) {
     const n = TYPES.length;
-    const gap = touch ? 0 : 46;
-    const by = ht - (touch ? 132 : 34);
-    // Keyboard and mouse: the row lives in the lower left, out of the middle of the night.
-    const rowX = touch ? cx : 36 + ((n - 1) / 2) * gap;
-    if (touch) {
-      glyph(ctx, h.type, cx, by, 1.3, SILVER);
-      text(ctx, h.pattern ?? TYPES[h.type], cx, by + 22, 15, rgba(SILVER, 0.85));
-    } else {
-      for (let i = 0; i < n; i++) {
-        const x = rowX + (i - (n - 1) / 2) * gap;
-        const on = i === h.type;
-        if (on) {
-          ctx.fillStyle = rgba(SILVER, 0.12);
-          ctx.beginPath();
-          ctx.arc(x, by - 4, 21, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        glyph(ctx, i, x, by - 6, 1, on ? SILVER : rgba(SILVER, 0.45));
-        text(ctx, `${i + 1}`, x, by + 13, 12, on ? AMBER : rgba(SILVER, 0.45), 'center', 600);
+    const gap = 46;
+    const by = ht - 34;
+    const rowX = 36 + ((n - 1) / 2) * gap;
+    for (let i = 0; i < n; i++) {
+      const x = rowX + (i - (n - 1) / 2) * gap;
+      const on = i === h.type;
+      if (on) {
+        ctx.fillStyle = rgba(SILVER, 0.12);
+        ctx.beginPath();
+        ctx.arc(x, by - 4, 21, 0, Math.PI * 2);
+        ctx.fill();
       }
-      text(ctx, h.pattern ?? TYPES[h.type], rowX, by - 34, 15, rgba(SILVER, 0.75));
+      glyph(ctx, i, x, by - 6, 1, on ? SILVER : rgba(SILVER, 0.45));
+      text(ctx, `${i + 1}`, x, by + 13, 12, on ? AMBER : rgba(SILVER, 0.45), 'center', 600);
     }
+    text(ctx, h.pattern ?? TYPES[h.type], rowX, by - 34, 15, rgba(SILVER, 0.75));
   }
   // ---- warnings at the edges
   for (const e of h.edges ?? []) edgeMark(ctx, e, w, ht, t);
