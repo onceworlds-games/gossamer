@@ -532,8 +532,8 @@ export function drawWren(ctx, wr, t, view) {
     const f = Math.min(1, wr.t / wr.warn);
     ctx.fillStyle = `rgba(4, 10, 10, ${0.12 + f * 0.22})`;
     ctx.fillRect(view.x0, wr.y - wr.band / 2, view.x1 - view.x0, wr.band);
-    ctx.strokeStyle = rgba(RUST, 0.35 + 0.35 * Math.abs(Math.sin(t * 6)));
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(224, 118, 90, ${0.45 + 0.4 * Math.abs(Math.sin(t * 6))})`;
+    ctx.lineWidth = 2.6;
     ctx.setLineDash([10, 8]);
     ctx.lineDashOffset = -t * 60 * wr.dir;
     for (const y of [wr.y - wr.band / 2, wr.y + wr.band / 2]) {

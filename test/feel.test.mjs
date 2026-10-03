@@ -132,3 +132,30 @@ test('the last Quick Orb is offered back once the wren has taken it', async () =
   assert.equal(run.ghost, null);
   assert.ok(run.silkAround(run.lastOrb) > run.lastOrb.n0 * 0.5, 'the web is back');
 });
+
+test('a key held when the notebook comes up is let go, and browser shortcuts are not moves', async () => {
+  globalThis.addEventListener = () => {};
+  globalThis.document = { addEventListener() {}, hidden: false };
+  const { Input } = await import('../game/js/app/input.js');
+  const input = new Input({ addEventListener() {}, getBoundingClientRect: () => ({ left: 0, top: 0 }), setPointerCapture() {} });
+  const press = (key, extra = {}) => input.key({ key, repeat: false, preventDefault() {}, ...extra }, true);
+  const release = (key) => input.key({ key, preventDefault() {} }, false);
+  press('d');
+  assert.equal(input.keys.size, 0, 'nothing is read while the controls are off');
+  input.enabled = true;
+  press('d');
+  press('e');
+  assert.ok(input.keys.has('d'));
+  input.take();
+  input.enabled = false; // the night ended with D and E down
+  assert.equal(input.keys.size, 0, 'switching off lets go of every key');
+  release('d'); // and the late key-up changes nothing
+  input.enabled = true;
+  assert.equal(input.keys.size, 0, 'the next night starts standing still');
+  input.take();
+  press('r', { ctrlKey: true });
+  press('f', { metaKey: true });
+  assert.deepEqual(input.take(), [], 'Ctrl+R and Cmd+F do nothing in the garden');
+  press('r');
+  assert.deepEqual(input.take().map((e) => e.t), ['respin']);
+});

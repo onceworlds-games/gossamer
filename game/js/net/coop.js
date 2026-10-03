@@ -344,7 +344,6 @@ export class Coop {
     const s = this.game.season();
     if (!s) return;
     let wrote = false;
-    const let_in = [];
     for (const p of watchers) {
       if (run.world.spiders.some((sp) => sp.id === p.id)) continue;
       // A friend who arrives at dusk gets a spider in the season (the one they picked) and a place on the web.
@@ -354,10 +353,10 @@ export class Coop {
       } else if (setSpecies(s, p.id, String(p.presence.sp))) wrote = true;
       const r = s.roster[p.id];
       addSpider(run.world, { id: p.id, sp: r.sp, up: r.up, tr: r.tr });
-      let_in.push(p.id);
     }
     if (wrote) this.game.writeSeason(s);
-    if (let_in.length) this.room.admit?.(let_in);
+    // Everyone who asked, again if need be: a held-back admit must not leave a spider in the night with nobody behind it.
+    this.room.admit?.(watchers.map((p) => p.id));
   }
 }
 

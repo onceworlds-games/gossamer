@@ -33,6 +33,8 @@ export class Screens {
     box.append(h, b);
     this.root.append(box);
     this.el = box;
+    // Enter starts it, for anyone at a keyboard.
+    requestAnimationFrame(() => this.mode === 'title' && b.focus({ preventScroll: true, focusVisible: false }));
   }
 
   book() {

@@ -565,7 +565,7 @@ export class NightRun {
     const onScreen = (x, y) => cam.toScreen(x, y, sp);
     if (w.wren && w.wren.st === 'warn') {
       const s = onScreen(0, w.wren.y);
-      edges.push({ x: w.wren.dir > 0 ? 0 : cam.sw, y: s.y, dx: w.wren.dir > 0 ? -10 : 10, dy: 0, urgent: true, label: 'Wren' });
+      edges.push({ x: w.wren.dir > 0 ? 0 : cam.sw, y: s.y, dx: w.wren.dir > 0 ? -10 : 10, dy: 0, urgent: true, label: `Wren ${Math.max(1, Math.ceil(w.wren.warn - w.wren.t))}` });
     }
     if (this.gustWarn && this.gustWarn.until > this.t) {
       edges.push({ x: this.gustWarn.dir > 0 ? 0 : cam.sw, y: cam.sh * 0.3, dx: this.gustWarn.dir > 0 ? -10 : 10, dy: 0, label: 'Wind', warm: false });

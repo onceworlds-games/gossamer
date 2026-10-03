@@ -8,6 +8,7 @@ import { drawFx, updateFx, rain as rainFx, setFxScale } from './fx.js';
 import { drawHud } from './hud.js';
 import { SILVER, AMBER, RUST, rgba } from './palette.js';
 import { anchorPos } from '../sim/spider.js';
+import { retreatNode } from '../sim/garden.js';
 import { W, GROUND, PREY } from '../sim/data.js';
 
 export class Renderer {
@@ -100,6 +101,7 @@ export class Renderer {
       drawSpider(ctx, world, sp, t, v.dt, { anchor, spin: sp.id === v.me ? v.spin : sp.spin });
     }
     if (v.retreat !== false) drawRetreat(ctx, world, t, v.spiders, true);
+    if (world.wren?.st === 'warn' && v.hud) this.safe(ctx, world, t);
     if (world.mantis) drawMantis(ctx, world.mantis, t);
     for (const p of prey) if (p.st === 'fly' && cam.visible(p.x, p.y)) drawPrey(ctx, p, t, q);
     for (const w of world.wasps ?? []) if (cam.visible(w.x, w.y)) drawWasp(ctx, w, t);
@@ -227,6 +229,23 @@ export class Renderer {
       ctx.stroke();
     }
     void t;
+  }
+
+  /** While the wren's shadow is coming: the leaf you can shelter in, breathing, so the answer is as easy to see as the danger. */
+  safe(ctx, world, t) {
+    const p = world.web.pos(retreatNode(world.garden));
+    if (!p) return;
+    const z = this.cam.z;
+    const k = 0.5 + 0.5 * Math.sin(t * 5);
+    ctx.lineWidth = Math.max(1.6 / z, 1.8);
+    ctx.strokeStyle = rgba(AMBER, 0.4 + 0.5 * k);
+    for (let i = 0; i < 2; i++) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y - 4, 26 + i * 9 + k * 5, 0, Math.PI * 2);
+      ctx.globalAlpha = 1 - i * 0.5;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
   }
 
   /** The first night's pointers: a ring on a twig worth a thread, a wider one where the first web should go. */

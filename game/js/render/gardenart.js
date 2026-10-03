@@ -53,7 +53,27 @@ export function makeGardenArt(g) {
       flecks.push({ x: c.x + Math.cos(a) * c.rx * d, y, a: range(r, -0.9, 0.9) - 0.6, s: range(r, 0.7, 1.2) });
     }
   }
-  return { masses, flecks, r };
+  // The leaves that catch the moon, as two paths (all of them, and every second one) so a frame fills them in one go.
+  const leafAll = new Path2D();
+  const leafHalf = new Path2D();
+  flecks.forEach((f, i) => {
+    addLeaf(leafAll, f.x, f.y, f.a, 6.5 * f.s);
+    if (i % 2 === 0) addLeaf(leafHalf, f.x, f.y, f.a, 6.5 * f.s);
+  });
+  return { masses, flecks, leafAll, leafHalf, r };
+}
+
+function addLeaf(path, x, y, a, s) {
+  const c = Math.cos(a);
+  const sn = Math.sin(a);
+  const px = (u, v) => [x + u * c - v * sn, y + u * sn + v * c];
+  const p = px(0, 0);
+  const q1 = px(s * 0.5, -s * 0.42);
+  const e = px(s * 1.6, 0);
+  const q2 = px(s * 0.5, s * 0.42);
+  path.moveTo(p[0], p[1]);
+  path.quadraticCurveTo(q1[0], q1[1], e[0], e[1]);
+  path.quadraticCurveTo(q2[0], q2[1], p[0], p[1]);
 }
 
 /** Behind the silk: props and foliage masses. */
@@ -96,11 +116,7 @@ export function drawGardenBack(ctx, world, art, t, q) {
   }
   if (q !== 'low') {
     ctx.fillStyle = 'rgba(64, 118, 106, 0.42)';
-    const step = q === 'high' ? 1 : 2;
-    for (let i = 0; i < art.flecks.length; i += step) {
-      const f = art.flecks[i];
-      leafShape(ctx, f.x, f.y, f.a, 6.5 * f.s, true);
-    }
+    ctx.fill(q === 'high' ? art.leafAll : art.leafHalf);
   }
   // Gravestone slabs.
   for (const d of g.decor) {
