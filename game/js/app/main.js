@@ -11,7 +11,7 @@ async function boot() {
   }
   const roomP = platform.join(JOIN);
   const [{ Game }, room] = await Promise.all([import('./game.js'), roomP]);
-  const game = new Game({ room, join: JOIN, test: params.has('test') ? params.get('test') || 'night' : null });
+  const game = new Game({ room, join: JOIN, test: params.has('test') ? params.get('test') || 'night' : window.__gossamerTest === true ? 'night' : null });
   await game.init();
   let last = performance.now();
   const frame = (now) => {
