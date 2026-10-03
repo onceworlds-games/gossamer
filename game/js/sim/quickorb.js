@@ -6,7 +6,7 @@ import { THREADS, T_RADIAL, T_STICKY, T_SURFACE, MERGE, N_PREY } from './data.js
 import { crossing } from './web.js';
 
 export const PATTERNS = {
-  orb: { rays: 8, spread: 1, spacing: 16, from: 18, fill: 0.86, closed: true },
+  orb: { rays: 8, spread: 1, spacing: 21, from: 18, fill: 0.86, closed: true },
   ladder: { rays: 8, spread: 1, spacing: 13, from: 16, fill: 0.9, closed: true, tall: true },
   funnel: { rays: 7, spread: 0.62, spacing: 12, from: 16, fill: 0.9, closed: false },
   dense: { rays: 10, spread: 1, spacing: 12, from: 16, fill: 0.88, closed: true },

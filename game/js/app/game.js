@@ -644,6 +644,7 @@ export class Game {
   drawNight(run, dt) {
     const w = run.world;
     const touch = platform.controls.touch;
+    run.touch = touch;
     let pointer = this.input.aiming ?? (this.input.pointer.mouse && this.input.pointer.in ? this.input.pointer : null);
     const toWorld = (sx, sy) => this.renderer.cam.toWorld(sx, sy);
     run.charge = this.input.charging ? this.input.charge : undefined;

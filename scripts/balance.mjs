@@ -3,12 +3,14 @@
 //   node scripts/balance.mjs quick | full | <section> [--seeds N]   (sections: quota silk catch beetle wasp species)
 import { createWorld, stepWorld } from '../game/js/sim/world.js';
 import { makeBot, botTick, buildFor } from '../game/js/sim/bots.js';
-import { planOrb } from '../game/js/sim/quickorb.js';
+import { planOrb, PATTERNS } from '../game/js/sim/quickorb.js';
 import { spawnPrey } from '../game/js/sim/prey.js';
 import { PREY, SPECIES, GARDEN_KEYS, T_FRAME, T_RADIAL } from '../game/js/sim/data.js';
 import { lanePoint } from '../game/js/sim/garden.js';
 import { mix } from '../game/js/sim/rng.js';
 
+// A tuning knob for trying the spiral's spacing without editing the game: ORB_SPACING=20 node scripts/balance.mjs catch
+if (process.env.ORB_SPACING) PATTERNS.orb.spacing = Number(process.env.ORB_SPACING);
 const arg = process.argv[2] ?? 'all';
 const flag = process.argv.indexOf('--seeds');
 const SEEDS = flag > 0 ? Math.max(1, Number(process.argv[flag + 1]) | 0) : arg === 'quick' ? 8 : arg === 'full' ? 48 : 20;

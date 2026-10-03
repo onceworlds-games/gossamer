@@ -29,6 +29,7 @@ export class NightRun {
     this.big = null;
     this.edges = [];
     this.t = 0;
+    this.touch = false; // the player is on a touch screen (set each frame by the page)
     this.useOn = false;
     this.ctxLabel = 'Act';
     this.lastSilk = 0;
@@ -154,8 +155,18 @@ export class NightRun {
   }
 
   /**
+   * Is this screen spot under the platform's on-screen controls (the stick takes the lower left 45% by 55%, the buttons
+   * the lower right)? A tap there never reaches the game, so nothing is pointed at there.
+   */
+  underControls(sx, sy) {
+    if (!this.touch) return false;
+    const { sw, sh } = this.renderer.cam;
+    return (sx < sw * 0.45 && sy > sh * 0.45) || (sx > sw - 210 && sy > sh - 290) || sy < 60 || (sx < 140 && sy < 64);
+  }
+
+  /**
    * The first night points at things: a twig worth throwing a thread to, then the spot for the first web (on the
-   * lane the visitors fly). Chosen once per step, so the mark doesn't wander.
+   * lane the visitors fly). Chosen once per step, and again if the view drifts it under the thumbs.
    */
   mark(step) {
     const me = this.me();
@@ -164,29 +175,30 @@ export class NightRun {
       this.markFor = step;
       this.markVal = null;
     }
-    if (this.markVal) return this.markVal;
+    const cam = this.renderer?.cam;
+    const sp = {};
+    const free = (x, y) => !cam || !this.touch || !this.underControls(cam.toScreen(x, y, sp).x, sp.y);
+    if (this.markVal && free(this.markVal.x, this.markVal.y)) return this.markVal;
     const w = this.world;
     const web = w.web;
+    let best = null;
     if (step === 'cast') {
-      let best = null;
       for (let s = 0; s < web.nodeHigh; s++) {
         if (web.nid[s] < 0 || web.nid[s] >= 2000 || web.kind[s] !== 0 || web.adj[s].length === 0) continue;
         const d = Math.hypot(web.x[s] - me.x, web.y[s] - me.y);
-        if (d < 150 || d > 380 || web.y[s] > GROUND - 120) continue;
+        if (d < 150 || d > 380 || web.y[s] > GROUND - 120 || !free(web.x[s], web.y[s])) continue;
         const score = Math.abs(d - 250) + (web.y[s] > me.y + 80 ? 60 : 0);
         if (!best || score < best.score) best = { k: 'twig', x: web.x[s], y: web.y[s], score };
       }
-      this.markVal = best;
     } else {
       const sites = w.garden.sites.filter((s) => s.lane === 0);
-      let best = null;
       for (const s of sites.length ? sites : w.garden.sites) {
         const d = Math.hypot(s.x - me.x, s.y - me.y);
-        const score = d + (d > me.mods.range - 60 ? 400 : 0);
+        const score = d + (d > me.mods.range - 60 ? 400 : 0) + (free(s.x, s.y) ? 0 : 800);
         if (!best || score < best.score) best = { k: 'site', x: s.x, y: s.y, r: this.orbR(s), score };
       }
-      this.markVal = best;
     }
+    this.markVal = best ?? this.markVal;
     return this.markVal;
   }
 

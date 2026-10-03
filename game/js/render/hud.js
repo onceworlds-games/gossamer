@@ -22,7 +22,8 @@ export function drawHud(ctx, h, w, ht, t) {
   const touch = h.touch;
   // ---- the night's clock, top centre
   const cx = w / 2;
-  const cw = Math.min(220, w * 0.42);
+  // Narrow screens: keep the arc clear of the platform's buttons in the top left (they reach 140 px across).
+  const cw = Math.max(80, Math.min(220, w * 0.42, w - 2 * 146));
   const top = 22;
   ctx.strokeStyle = rgba(SILVER, 0.28);
   ctx.lineWidth = 1.5;

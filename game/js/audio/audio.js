@@ -43,16 +43,19 @@ export class Audio {
   build() {
     const c = this.ctx;
     this.master = c.createGain();
-    this.master.gain.value = 0.9;
+    this.master.gain.value = 1;
+    // Squeezed when a lot rings at once, then rounded off just under full scale: it can't clip, however many strings go.
     const comp = c.createDynamicsCompressor();
-    comp.threshold.value = -12;
-    comp.knee.value = 8;
-    comp.ratio.value = 12;
+    comp.threshold.value = -16;
+    comp.knee.value = 12;
+    comp.ratio.value = 8;
     comp.attack.value = 0.003;
-    comp.release.value = 0.25;
-    this.master.connect(comp).connect(c.destination);
-    this.sfx = gain(c, 0.8, this.master);
-    this.webBus = gain(c, 0.9, this.master);
+    comp.release.value = 0.2;
+    const round = c.createWaveShaper();
+    round.curve = roundOff();
+    this.master.connect(comp).connect(round).connect(c.destination);
+    this.sfx = gain(c, 0.9, this.master);
+    this.webBus = gain(c, 1.5, this.master);
     this.amb = gain(c, 0.55, this.master);
     this.music = gain(c, 0.0, this.master);
     // A short glassy echo on the web, so a pluck rings in the garden.
@@ -108,9 +111,13 @@ export class Audio {
     const rsrc = loop(c, this.noise);
     const hp = c.createBiquadFilter();
     hp.type = 'highpass';
-    hp.frequency.value = 1400;
+    hp.frequency.value = 800;
+    // Rolled off above 6 kHz: rain should patter on the leaves, not hiss in the ears.
+    const rlp = c.createBiquadFilter();
+    rlp.type = 'lowpass';
+    rlp.frequency.value = 5800;
     this.rain = gain(c, 0.0, this.amb);
-    rsrc.connect(hp).connect(this.rain);
+    rsrc.connect(hp).connect(rlp).connect(this.rain);
     // Water lapping (the reed bed): slow, low.
     const lsrc = loop(c, this.noise);
     const lp = c.createBiquadFilter();
@@ -489,7 +496,7 @@ export class Audio {
     this.wind.gain.setTargetAtTime(garden ? 0.05 + wind * 0.4 : 0, t, 0.4);
     this.windBand.frequency.setTargetAtTime(500 + wind * 1400, t, 0.4);
     const rain = garden && w?.weather?.rain;
-    this.rain.gain.setTargetAtTime(rain ? 0.09 : 0, t, 1.2);
+    this.rain.gain.setTargetAtTime(rain ? 0.075 : 0, t, 1.2);
     if (rain && Math.random() < dt * 14) this.tone({ f0: 2400 + Math.random() * 3000, dur: 0.03, vol: 0.02, pan: Math.random() * 2 - 1, bus: this.amb });
     if (rain && Math.random() < dt * 0.02) this.noiseHit({ type: 'lowpass', f0: 90, dur: 3.5, vol: 0.18, attack: 0.4, bus: this.amb });
     // An owl, now and then.
@@ -530,7 +537,7 @@ export class Audio {
       b.lastD = d;
       const base = x.st === 'hunt' ? 235 : 190;
       b.o.frequency.setTargetAtTime(base * (1 - Math.max(-0.25, Math.min(0.25, vr / 900))), t, 0.05);
-      b.g.gain.setTargetAtTime(x.st === 'dying' ? 0 : Math.min(0.09, 0.09 * this.near(x.x, x.y) ** 2), t, 0.08);
+      b.g.gain.setTargetAtTime(x.st === 'dying' ? 0 : 0.15 * this.near(x.x, x.y) ** 2, t, 0.08);
       b.p.pan.setTargetAtTime(this.pan(x.x), t, 0.05);
     }
     for (const [id, b] of this.wasps) {
@@ -579,6 +586,18 @@ export class Audio {
       }
     }
   }
+}
+
+/** A transfer curve that leaves everything below 0.6 alone and eases the rest toward 1 without ever reaching past it. */
+function roundOff() {
+  const n = 2048;
+  const curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;
+    const a = Math.abs(x);
+    curve[i] = Math.sign(x) * (a < 0.6 ? a : 0.6 + 0.4 * Math.tanh((a - 0.6) / 0.4));
+  }
+  return curve;
 }
 
 function gain(c, v, to) {
