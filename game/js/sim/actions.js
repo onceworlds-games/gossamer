@@ -187,6 +187,7 @@ export function removeThread(world, id, reason) {
   const web = world.web;
   const s = web.ti(id);
   if (s < 0) return;
+  if (reason >= 2 && web.type[s] <= T_RADIAL) world.tally.frameBreaks = (world.tally.frameBreaks ?? 0) + 1;
   const a = web.nid[web.ta[s]];
   const b = web.nid[web.tb[s]];
   web.removeThread(id, reason);

@@ -15,6 +15,7 @@ export class Screens {
   clear() {
     this.root.replaceChildren();
     this.el = null;
+    this.zoomEl = null;
     this.mode = null;
   }
 
@@ -74,6 +75,21 @@ export class Screens {
 
   frame(dt) {
     if (this.mode === 'book') this.notebook.frame(dt);
+  }
+
+  /** On touch screens, two small buttons zoom (the frame doesn't allow pinching). */
+  zoom(show, onIn, onOut) {
+    if (show && !this.zoomEl) {
+      const box = div('zoom');
+      box.append(button('', '+', onIn), button('', '−', onOut));
+      box.firstChild.setAttribute('aria-label', 'Zoom in');
+      box.lastChild.setAttribute('aria-label', 'Zoom out');
+      this.root.append(box);
+      this.zoomEl = box;
+    } else if (!show && this.zoomEl) {
+      this.zoomEl.remove();
+      this.zoomEl = null;
+    }
   }
 }
 

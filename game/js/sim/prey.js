@@ -355,6 +355,7 @@ export function stick(world, p, s, t, hx, hy) {
   p.y = web.y[ns];
   for (const t2 of web.adj[ns]) web.pluck(t2, 120 + def.mass * 160);
   world.ev.push({ k: 'stick', prey: p.id, sp: p.sp, x: p.x, y: p.y, th: r.a, big: p.big });
+  p.breaks = world.tally.frameBreaks ?? 0;
   world.tally.caught[p.sp] = (world.tally.caught[p.sp] ?? 0) + 1;
 }
 
@@ -572,7 +573,8 @@ export function eatPrey(world, p, sp) {
   sp.silk = Math.min(sp.mods.maxSilk, sp.silk + food * SILK_PER_FOOD);
   p.st = 'gone';
   p.heldBy = null;
-  world.ev.push({ k: 'eat', id: sp.id, prey: p.id, sp: p.sp, food, x: p.x, y: p.y, big: p.big });
+  // Clean: no frame or radial thread was lost while it hung there (the Beetle Buster badge).
+  world.ev.push({ k: 'eat', id: sp.id, prey: p.id, sp: p.sp, food, x: p.x, y: p.y, big: p.big, clean: p.breaks !== undefined && p.breaks === (world.tally.frameBreaks ?? 0) });
 }
 
 // ---------------------------------------------------------------- hunters and fishers

@@ -238,8 +238,11 @@ export class Input {
     const a = this.aiming;
     this.aiming = null;
     if (!a || a.id !== e.pointerId || cancelled || !this.enabled) return;
+    const held = performance.now() - a.t0;
+    // A quick swipe is not a tap (a held finger that moves is aiming with the loupe, and does cast).
+    if (a.touch && a.moved > 24 && held < 220) return;
     if (a.touch) this.lastTap = { x: a.x, y: a.y };
-    this.events.push({ t: 'tap', sx: a.x, sy: a.y, held: performance.now() - a.t0, touch: a.touch });
+    this.events.push({ t: 'tap', sx: a.x, sy: a.y, held, touch: a.touch });
   }
 
   /** Per frame: the stick (keyboard, platform stick or gamepad), held keys, and charge/spin timers. */

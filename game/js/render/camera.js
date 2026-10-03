@@ -17,6 +17,20 @@ export class Camera {
     this.sx = 0;
     this.sy = 0;
     this.t = 0;
+    this.panX = 0; // a look around (right-drag, two fingers), drifting back when let go
+    this.panY = 0;
+  }
+
+  /** Screen-pixel drag to a look offset; `held` keeps it, otherwise it eases back to the spider. */
+  look(dx, dy, held, dt) {
+    if (held) {
+      this.panX = Math.max(-500, Math.min(500, this.panX - dx / this.z));
+      this.panY = Math.max(-400, Math.min(400, this.panY - dy / this.z));
+    } else {
+      const k = Math.min(1, dt * 0.8);
+      this.panX -= this.panX * k;
+      this.panY -= this.panY * k;
+    }
   }
 
   resize(w, h) {
@@ -40,8 +54,8 @@ export class Camera {
     view = Math.max(240, Math.min(1100, view));
     this.view += (view - this.view) * Math.min(1, dt * (snap ? 60 : 1.6));
     this.z = short / this.view;
-    let fx = focus.x + (focus.vx || 0) * 0.25;
-    let fy = focus.y + (focus.vy || 0) * 0.2 - 30;
+    let fx = focus.x + (focus.vx || 0) * 0.25 + this.panX;
+    let fy = focus.y + (focus.vy || 0) * 0.2 - 30 + this.panY;
     if (box) {
       // Lean toward the web's middle so it stays framed.
       fx = fx * 0.65 + ((box.x0 + box.x1) / 2) * 0.35;

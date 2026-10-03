@@ -402,7 +402,7 @@ export class Game {
     if (e.k === 'eat') this.award('first-catch');
     if (e.k === 'orbdone' && !e.partial) this.award('orb-complete');
     if (e.k === 'perfect') this.award('perfect-radials');
-    if (e.k === 'eat' && e.sp === 'beetle' && !this.run?.world.tally.frameSnapped) this.award('beetle-buster');
+    if (e.k === 'eat' && e.sp === 'beetle' && e.clean) this.award('beetle-buster');
   }
 
   setControls() {
@@ -470,9 +470,9 @@ export class Game {
       this.award('daily-weaver');
       const today = s?.daily?.date ?? '';
       if (this.profile.best.daily.date !== today || this.profile.best.daily.score < res.t.food) this.profile.best.daily = { date: today, score: res.t.food };
-      platform.submit('daily-garden', res.t.food * 10);
+      platform.submit('daily-garden', Math.round(res.t.food));
     }
-    platform.submit('biggest-catch', per.food * 10);
+    platform.submit('biggest-catch', Math.round(per.food));
     const unlocked = checkUnlocks(this.profile);
     this.unlockedNow = unlocked;
     if (s?.over && s.over !== false) {
@@ -534,6 +534,10 @@ export class Game {
     const cam = this.renderer.cam;
     const toWorld = (sx, sy) => cam.toWorld(sx, sy);
     for (const e of events) if (e.t === 'zoom') cam.user = Math.max(0.55, Math.min(2.4, cam.user * (e.d > 0 ? 0.88 : 1.14)));
+    // Looking around: a right-drag or two fingers move the view; it drifts back to the spider after.
+    const pan = this.input.pan;
+    cam.look(pan.x - (this.panSeen?.x ?? pan.x), pan.y - (this.panSeen?.y ?? pan.y), pan.active, dt);
+    this.panSeen = { x: pan.x, y: pan.y };
     this.net.frame(dt);
     if (this.amHost() && this.screen === 'book') this.hostEnsureSeason();
     const run = this.screen === 'night' && this.run ? this.run : null;
@@ -564,6 +568,8 @@ export class Game {
     if (this.ctlT > 0) return;
     this.ctlT = 0.25;
     this.setControls();
+    const cam = this.renderer.cam;
+    this.screens.zoom(platform.controls.touch && this.screen === 'night', () => (cam.user = Math.min(2.4, cam.user * 1.2)), () => (cam.user = Math.max(0.55, cam.user / 1.2)));
   }
 
   drawNight(run, dt) {
