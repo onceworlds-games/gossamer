@@ -1,0 +1,8 @@
+{
+  "slug": "gossamer",
+  "name": "Gossamer",
+  "description": "Spin a web in a moonlit garden and catch the night's visitors. Solo or up to four.",
+  "dir": "game",
+  "productionBranch": "main",
+  "genre": "Simulation"
+}
