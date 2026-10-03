@@ -398,7 +398,7 @@ function nodeKeys(g) {
 }
 
 /** Branch kinds a cast line snags on (thin foliage lets it through). */
-const SNAG = new Set(['ground', 'trunk', 'stem', 'cane', 'reed', 'post', 'rail', 'pole', 'bench', 'stake', 'bar', 'glass', 'iron', 'stone', 'bough', 'line', 'chain']);
+const SNAG = new Set(['ground', 'trunk', 'post', 'rail', 'pole', 'bench', 'bar', 'glass', 'iron', 'stone', 'bough', 'line', 'chain']);
 
 /** Builds the garden into a web: anchor nodes for each point, static branch threads between them. Returns ids. */
 export function buildGarden(web, g) {

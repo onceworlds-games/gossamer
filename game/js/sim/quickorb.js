@@ -68,10 +68,11 @@ function spokeEnd(web, x, y, a, maxD, r) {
 /**
  * Plans a web around (hx, hy) reaching about r px. Returns { ok, why, hub, ends: [{ x, y, s, t, a }], cost, pattern }.
  */
-export function planOrb(web, hx, hy, r, pattern = 'orb', range = 520) {
+export function planOrb(web, hx, hy, r, pattern = 'orb', range = 520, reach = 0) {
   const p = PATTERNS[pattern] ?? PATTERNS.orb;
   r = Math.max(50, Math.min(170, Number.isFinite(r) ? r : 95));
-  const maxD = Math.min(range, r * (p.tall ? 2.4 : 1.9));
+  // How far a spoke may run to find an anchor (a smaller spiral can still hang from far twigs).
+  const maxD = Math.min(range, Math.max(220, reach, r * (p.tall ? 2.4 : 2)));
   const angles = rayAngles(p, p.tall);
   const ends = [];
   let miss = 0;

@@ -174,6 +174,12 @@ function fly(world, p, dt) {
       p.zigT = range(r, 0.3, 0.9);
     }
     ty += p.zig;
+    // A bolas spider's scent turns some flies too.
+    const lure = world.lures.length ? attractor(world, p, true) : null;
+    if (lure) {
+      tx = tx * (1 - lure.pull) + lure.x * lure.pull;
+      ty = ty * (1 - lure.pull) + (lure.y + p.zig * 0.3) * lure.pull;
+    }
   } else if (p.sp === 'moth') {
     ty += Math.sin(p.t * 5 + p.phase) * 16;
     const lure = attractor(world, p);
@@ -217,10 +223,10 @@ function fly(world, p, dt) {
   contacts(world, p, x0, y0, def);
 }
 
-function attractor(world, p) {
+function attractor(world, p, luresOnly = false) {
   let best = null;
   let bestPull = 0;
-  for (const l of world.lights) {
+  for (const l of luresOnly ? [] : world.lights) {
     const d = Math.hypot(l.x - p.x, l.y - p.y);
     const reach = 260 * l.power;
     if (d > reach) continue;
@@ -231,10 +237,11 @@ function attractor(world, p) {
     }
   }
   for (const l of world.lures) {
+    if (p.sp !== 'moth' && !l.flies && p.sp !== 'fly') continue;
     const d = Math.hypot(l.x - p.x, l.y - p.y);
     const reach = 320 * l.power;
     if (d > reach) continue;
-    const pull = Math.min(0.92, (1 - d / reach) * 1.6 * l.power);
+    const pull = Math.min(0.92, (1 - d / reach) * 1.6 * l.power * (p.sp === 'moth' ? 1 : 0.45));
     if (pull > bestPull) {
       bestPull = pull;
       best = { x: l.x, y: l.y, pull, orbit: 26 };
@@ -484,7 +491,7 @@ function perch(world, p, dt) {
     const seen = ang < half || d < 28;
     if (!seen) continue;
     const noise = Math.max(0.15, sp.noise) * (sp.sp === 'jumper' ? sp.mods.stalk : 1);
-    const a = (noise * 1.8 + (1 - d / reach) * 0.8) * dt * 1.6;
+    const a = (noise * 1.8 + (1 - d / reach) * 0.8) * dt * 2.1;
     if (a > worst) {
       worst = a;
       threat = sp;
@@ -577,12 +584,14 @@ export function hunt(world, dt) {
     for (const p of world.prey) {
       if (p.st !== 'fly' && p.st !== 'land' && p.st !== 'stuck') continue;
       const flying = p.st === 'fly';
-      const reach = flying ? 7 + PREY[p.sp].size * 0.35 : 12 + PREY[p.sp].size * 0.6;
+      // Gnats and midges scatter from a leaping spider; only bigger fliers can be snatched out of the air.
+      if (flying && (p.sp === 'gnat' || p.sp === 'midge')) continue;
+      const reach = flying ? 6 + PREY[p.sp].size * 0.25 : 12 + PREY[p.sp].size * 0.6;
       if (Math.hypot(p.x - sp.x, p.y - sp.y) > reach) continue;
-      // A flier sees it coming and swerves, often.
+      // A flier sees it coming and swerves, nearly always: the hunter's meal is the one that landed.
       if (flying && p.dodged !== sp.air) {
         p.dodged = sp.air;
-        if (chance(world.rng, { gnat: 0.7, midge: 0.7, fly: 0.55, moth: 0.3, beetle: 0.15, dragonfly: 0.6 }[p.sp] ?? 0.5)) continue;
+        if (chance(world.rng, { fly: 0.88, moth: 0.6, beetle: 0.4, dragonfly: 0.92 }[p.sp] ?? 0.9)) continue;
       }
       if (PREY[p.sp].armour || p.sp === 'dragonfly') {
         if (sp.venom <= 0) {
@@ -618,7 +627,7 @@ export function hunt(world, dt) {
       for (const p of world.prey) {
         if (p.st !== 'fly' && p.st !== 'land') continue;
         if (Math.hypot(p.x - b.x, p.y - b.y) > 14 + PREY[p.sp].size * 0.4) continue;
-        const odds = p.sp === 'moth' ? 0.92 : p.sp === 'fly' ? 0.3 : p.sp === 'midge' || p.sp === 'gnat' ? 0.15 : 0.06;
+        const odds = p.sp === 'moth' ? 0.95 : p.sp === 'fly' ? 0.55 : p.sp === 'midge' || p.sp === 'gnat' ? 0.15 : 0.06;
         if (chance(world.rng, Math.min(0.98, odds * b.sticky))) {
           grabPrey(world, p, owner);
           b.prey = p.id;

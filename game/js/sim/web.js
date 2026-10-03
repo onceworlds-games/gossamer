@@ -4,11 +4,12 @@
 // Ids are never reused within a night; slots are. Structural changes can be logged as ops for other players.
 import {
   MAX_NODES, MAX_THREADS, SUBSTEPS, DT, GRAVITY, SILK_E, DAMP, SNAP, VMAX, THREADS, T_SURFACE, T_STICKY, T_ALARM,
-  N_ANCHOR, N_JUNCTION, N_PREY, JUNCTION_MASS, W, H, GARDEN_IDS,
+  N_ANCHOR, N_JUNCTION, N_PREY, JUNCTION_MASS, W, H, GARDEN_IDS, GROUND,
 } from './data.js';
 import { Writer, Reader } from './pack.js';
 
 const MAX_DEG = 24;
+const FLOOR = GROUND + 10;
 const H_SUB = DT / SUBSTEPS;
 const CELL = 80;
 const GW = Math.ceil((W + 400) / CELL);
@@ -457,6 +458,11 @@ export class Web {
         y[i] = oy[i] + dy;
         px[i] = x[i] - dx / SUBSTEPS;
         py[i] = y[i] - dy / SUBSTEPS;
+      }
+      // Silk can't sag through the soil.
+      if (y[i] > FLOOR) {
+        y[i] = FLOOR;
+        if (py[i] > FLOOR) py[i] = FLOOR;
       }
       if (x[i] < -300 || x[i] > W + 300 || y[i] < -300 || y[i] > H + 200) {
         x[i] = px[i] = Math.min(W + 300, Math.max(-300, x[i]));

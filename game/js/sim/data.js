@@ -47,18 +47,18 @@ export const N_PREY = 2; // a stuck prey: a heavy free node
 // food, mass, speed (px/s), size (px), stick (base chance on sticky), tear (chance to rip through instead),
 // struggle (kick px/s), escape (s stuck before it tears free), wrap (s), eat (s)
 export const PREY = {
-  gnat: { name: 'Gnat', food: 1, mass: 0.1, speed: 62, size: 2.2, stick: 0.96, tear: 0, struggle: 60, escape: 10, wrap: 0.35, eat: 0.7, small: true },
-  midge: { name: 'Midge', food: 1.5, mass: 0.15, speed: 55, size: 2.6, stick: 0.93, tear: 0, struggle: 70, escape: 10, wrap: 0.4, eat: 0.8, small: true },
-  fly: { name: 'Fly', food: 3, mass: 0.6, speed: 150, size: 5, stick: 0.8, tear: 0, struggle: 200, escape: 6, wrap: 1.1, eat: 1.4, small: true },
-  moth: { name: 'Moth', food: 6, mass: 1.2, speed: 92, size: 12, stick: 0.62, tear: 0.55, struggle: 160, escape: 6.5, wrap: 1.7, eat: 2 },
-  beetle: { name: 'Beetle', food: 8, mass: 4, speed: 82, size: 9, stick: 0.5, tear: 0, struggle: 150, escape: 9, wrap: 3, eat: 2.2, armour: true },
-  dragonfly: { name: 'Dragonfly', food: 20, mass: 6, speed: 250, size: 26, stick: 0.55, tear: 0, struggle: 300, escape: 4.5, wrap: 3.6, eat: 3, shred: true },
+  gnat: { name: 'Gnat', food: 1, mass: 0.1, speed: 62, size: 2.2, stick: 0.96, tear: 0, struggle: 60, escape: 10, wrap: 0.35, eat: 0.4, small: true },
+  midge: { name: 'Midge', food: 1.5, mass: 0.15, speed: 55, size: 2.6, stick: 0.93, tear: 0, struggle: 70, escape: 10, wrap: 0.4, eat: 0.5, small: true },
+  fly: { name: 'Fly', food: 3, mass: 0.6, speed: 150, size: 5, stick: 0.8, tear: 0, struggle: 200, escape: 6, wrap: 1.1, eat: 0.9, small: true },
+  moth: { name: 'Moth', food: 6, mass: 1.2, speed: 92, size: 12, stick: 0.62, tear: 0.55, struggle: 160, escape: 6.5, wrap: 1.7, eat: 1.4 },
+  beetle: { name: 'Beetle', food: 8, mass: 4, speed: 82, size: 9, stick: 0.5, tear: 0, struggle: 150, escape: 9, wrap: 3, eat: 1.8, armour: true },
+  dragonfly: { name: 'Dragonfly', food: 20, mass: 6, speed: 250, size: 26, stick: 0.55, tear: 0, struggle: 300, escape: 4.5, wrap: 3.6, eat: 2.4, shred: true },
 };
 export const PREY_KEYS = Object.keys(PREY);
 export const MAX_PREY = 70;
 
 // ---------------------------------------------------------------- hostiles
-export const WASP = { speed: 150, huntSpeed: 230, sting: 25, detect: 170, patrol: 34, cutTime: 0.45, hp: 2, stun: 2.5 };
+export const WASP = { speed: 150, huntSpeed: 230, sting: 25, detect: 190, patrol: 48, cutTime: 0.45, hp: 2, stun: 2.5, loot: 200 };
 export const WREN = { warn: 2.5, band: 86, damage: 55, cross: 0.75 };
 export const MANTIS = { speed: 52, reach: 74, damage: 40, windup: 0.95, climb: 12, falls: 3 };
 
@@ -66,7 +66,7 @@ export const MANTIS = { speed: 52, reach: 74, damage: 40, windup: 0.95, climb: 1
 // The three species. Speeds in px/s; silk regen per second while not spinning.
 export const SPECIES = {
   orb: { name: 'Orb Weaver', hp: 100, silk: 100, regen: 1.8, speed: 220, range: 520, leap: 260, castTime: 0.25 },
-  jumper: { name: 'Jumping Spider', hp: 100, silk: 40, regen: 2, speed: 165, run: 245, leap: 270, charge: 0.7, range: 0 },
+  jumper: { name: 'Jumping Spider', hp: 100, silk: 40, regen: 2, speed: 165, run: 245, leap: 235, charge: 0.7, range: 0 },
   bolas: { name: 'Bolas Spider', hp: 90, silk: 60, regen: 2.2, speed: 150, line: 72, fling: 190, range: 0 },
 };
 export const SPECIES_KEYS = Object.keys(SPECIES);
@@ -91,7 +91,7 @@ export const DUSK = 25;
 export const NIGHT = 120;
 export const DAWN_RECYCLE = 0.6;
 export const REST_SILK = 0.25; // of max, regained over the day
-export const QUOTAS = [18, 24, 30, 36, 43, 50, 57, 64, 72, 80];
+export const QUOTAS = [9, 14, 20, 25, 30, 33, 35, 37, 39, 40]; // tuned with scripts/balance.mjs
 export const SEASON_NIGHTS = 10;
 export const START_LIVES = 3;
 export const ENDLESS_GROWTH = 1.08;

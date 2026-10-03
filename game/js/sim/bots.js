@@ -1,6 +1,6 @@
 // Bot spiders: they play through the same inputs and commands a player sends. The balance harness uses them to
 // measure the numbers, and the game's autopilot (?test, the title screen) uses them to keep a night lively.
-import { PREY, SPECIES, T_STICKY, T_FRAME, T_SURFACE, N_PREY, GROUND, W } from './data.js';
+import { PREY, SPECIES, T_STICKY, T_FRAME, T_SURFACE, N_PREY, GROUND, W, UPGRADES, upgradeCost } from './data.js';
 import { makeRng, range, rand, chance, mix, hash } from './rng.js';
 import { route, standSlot } from './path.js';
 import { useTarget, fitOrb } from './actions.js';
@@ -10,6 +10,8 @@ export const SKILLS = {
   novice: { react: 0.9, aim: 40, threat: 0.15, siteLuck: 0.8, repair: 0, prioritise: false, retreatHp: 0 },
   average: { react: 0.55, aim: 14, threat: 0.55, siteLuck: 0.85, repair: 0.6, prioritise: false, retreatHp: 25 },
   good: { react: 0.2, aim: 5, threat: 0.95, siteLuck: 1, repair: 1, prioritise: true, retreatHp: 35 },
+  // A capable weaver that ignores hunters entirely (the wasp measurement's "unprotected" spider).
+  unprotected: { react: 0.55, aim: 14, threat: 0, siteLuck: 0.85, repair: 0.6, prioritise: false, retreatHp: 0 },
 };
 
 export function makeBot(world, id, skill = 'average') {
@@ -196,7 +198,7 @@ function orbBot(world, bot, sp) {
     const dist = Math.hypot(site.x - sp.x, site.y - sp.y);
     if (dist > sp.mods.range - 30) return approach(world, bot, sp, site);
     const plan = fitOrb(web, site.x, site.y, site.r ?? 95, 'orb', sp.mods.range, sp.silk);
-    if (!plan.ok && plan.why !== 'silk') {
+    if (!plan.ok && (plan.why !== 'silk' || sp.silk >= sp.mods.maxSilk * 0.95)) {
       // Nothing to hang it from here: try another place.
       bot.site = chooseSite(world, bot, site);
       bot.cool = 0.5;
@@ -253,6 +255,7 @@ function jumperBot(world, bot, sp) {
   let bs = Infinity;
   for (const p of world.prey) {
     if (p.st !== 'land' && p.st !== 'fly' && p.st !== 'stuck') continue;
+    if (p.st === 'fly' && (p.sp === 'gnat' || p.sp === 'midge')) continue;
     const d = Math.hypot(p.x - sp.x, p.y - sp.y);
     if (d > 520) continue;
     const def = PREY[p.sp];
@@ -317,5 +320,34 @@ function bolasBot(world, bot, sp) {
     world.cmds.push({ id: sp.id, t: 'fling', x: target.x + target.vx * lead + range(bot.rng, -1, 1) * bot.k.aim, y: target.y + target.vy * lead + range(bot.rng, -1, 1) * bot.k.aim, power: Math.min(1, bd / 200) });
   }
 }
+
+// ---------------------------------------------------------------- what a bot of each skill would have bought
+const PRIORITY = {
+  novice: ['legs', 'glands', 'eyes', 'camo', 'shake', 'alarm'],
+  average: ['glands', 'droplets', 'strong', 'legs', 'eyes', 'camo', 'venom', 'shake'],
+  good: ['droplets', 'glands', 'strong', 'venom', 'camo', 'droplets', 'glands', 'eyes', 'legs', 'eggsac'],
+};
+const INCOME = { novice: 7, average: 11, good: 15 };
+
+/** Upgrades a spider of this skill would plausibly own by night n. */
+export function buildFor(skill, night, sp = 'orb') {
+  let points = Math.max(0, night - 1) * INCOME[skill];
+  const up = {};
+  const order = PRIORITY[skill];
+  for (let pass = 0; pass < 3; pass++) {
+    for (const id of order) {
+      if (!UPGRADES[id].for.includes(sp)) continue;
+      const tier = up[id] | 0;
+      if (tier > pass || tier >= 3) continue;
+      const c = upgradeCost(id, tier);
+      if (c <= points) {
+        points -= c;
+        up[id] = tier + 1;
+      }
+    }
+  }
+  return up;
+}
+
 
 export { SPECIES };

@@ -39,17 +39,18 @@ export function nightRules(players, cold = 0, o = {}) {
 function speciesWeights(night, garden) {
   const g = GARDENS[garden]?.prey ?? GARDENS.cottage.prey;
   const n = night;
+  // Early nights are gnats and flies; as the season turns, bigger visitors come (and the gnats thin out).
   return {
-    gnat: 1 * g.gnat,
-    midge: 0.9 * g.midge,
-    fly: (0.75 + n * 0.02) * g.fly,
-    moth: (n === 1 ? 0.14 : 0.24 + n * 0.035) * g.moth,
-    beetle: (n < 3 ? 0 : 0.07 + n * 0.012) * g.beetle,
-    dragonfly: (n < 6 ? (garden === 'reed' && n >= 4 ? 0.03 : 0) : 0.03 + (n - 6) * 0.012) * g.dragonfly,
+    gnat: Math.max(0.35, 1.15 - n * 0.08) * g.gnat,
+    midge: Math.max(0.3, 1 - n * 0.07) * g.midge,
+    fly: (0.8 + n * 0.02) * g.fly,
+    moth: (n === 1 ? 0.18 : 0.26 + n * 0.06) * g.moth,
+    beetle: (n < 3 ? 0 : 0.08 + n * 0.02) * g.beetle,
+    dragonfly: (n < 6 ? (garden === 'reed' && n >= 4 ? 0.04 : 0) : 0.04 + (n - 6) * 0.02) * g.dragonfly,
   };
 }
 
-const LAND = { gnat: 0, midge: 0, fly: 0.35, moth: 0.45, beetle: 0.5, dragonfly: 0.3 };
+const LAND = { gnat: 0, midge: 0, fly: 0.32, moth: 0.4, beetle: 0.45, dragonfly: 0.22 };
 
 /**
  * script: { dusk, length, wind, humidity, events: [{ t, k, ... }] } sorted by t. Prey events: { k: 'prey', sp, lane,
@@ -64,7 +65,7 @@ export function makeScript(seed, night, garden, rules, cold = 0, mode = 'season'
   const events = [];
   const lanes = 3;
   const nightish = Math.max(1, Math.min(14, night));
-  const base = (18 + 2.2 * nightish) * rules.preyMul * (rules.gentle ? 0.8 : 1);
+  const base = (20 + 2.2 * nightish) * rules.preyMul * (rules.gentle ? 0.8 : 1);
   const gapStart = dusk + length * range(r, 0.3, 0.45);
   const gapLen = rules.leanGap ? 26 : 18;
   const rushStart = dusk + length * range(r, 0.62, 0.72);
@@ -117,7 +118,7 @@ export function makeScript(seed, night, garden, rules, cold = 0, mode = 'season'
     }
     // Hunters.
     if (night >= 2) {
-      const wasps = night >= 10 ? 2 : 1 + Math.floor((night - 1) / 3);
+      const wasps = night >= 10 ? 2 : 1 + Math.floor(night / 3);
       for (let i = 0; i < wasps; i++) events.push({ t: range(r, dusk + 12, end - 30), k: 'wasp' });
     }
     const wrenFrom = rules.earlyWren ? 2 : 3;
@@ -145,9 +146,9 @@ export function makeScript(seed, night, garden, rules, cold = 0, mode = 'season'
 function laneFor(r, garden, lanes) {
   void garden;
   void lanes;
-  // Shares match the garden's lanes (0.55-0.6 main, ~0.3, ~0.12): pick by those.
+  // The main lane carries most of the traffic, the others less.
   const x = rand(r);
-  return x < 0.58 ? 0 : x < 0.88 ? 1 : 2;
+  return x < 0.64 ? 0 : x < 0.88 ? 1 : 2;
 }
 
 export function quota(world) {

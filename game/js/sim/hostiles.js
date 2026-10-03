@@ -78,7 +78,7 @@ export function updateWasps(world, dt) {
         w.st = 'patrol';
         w.target = null;
       }
-    } else if (quarry && w.cool <= 0 && w.t < w.life) {
+    } else if (w.st === 'patrol' && quarry && w.cool <= 0 && w.t < w.life) {
       w.st = 'hunt';
       w.target = quarry.id;
       w.lost = 0;
@@ -142,15 +142,16 @@ export function updateWasps(world, dt) {
       continue;
     }
     // Patrol, and take any cocoon passed close by.
-    const loot = world.prey.find((p) => (p.st === 'cocoon' || p.st === 'subdued' || p.st === 'stuck') && Math.hypot(p.x - w.x, p.y - w.y) < 110 && !p.heldBy);
-    if (loot && !w.carry && w.t < w.life) {
+    const loot = world.prey.find((p) => (p.st === 'cocoon' || p.st === 'subdued' || p.st === 'stuck') && Math.hypot(p.x - w.x, p.y - w.y) < WASP.loot && !p.heldBy);
+    if (loot && (w.carry | 0) < 3 && w.t < w.life) {
       steer(w, loot.x, loot.y, WASP.speed * slow, dt);
       if (Math.hypot(loot.x - w.x, loot.y - w.y) < 10) {
         world.ev.push({ k: 'stolen', prey: loot.id, sp: loot.sp, x: loot.x, y: loot.y, by: 'wasp' });
         world.tally.stolen++;
         take(world, loot);
-        w.carry = loot.id;
-        w.st = 'leave';
+        // It eats on the wing and keeps looking (three thefts and it's full).
+        w.carry = (w.carry | 0) + 1;
+        if (w.carry >= 3) w.st = 'leave';
       }
       continue;
     }

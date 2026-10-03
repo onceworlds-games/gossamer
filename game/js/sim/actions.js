@@ -265,10 +265,10 @@ function noteStructure(world, sp, from, to, type) {
 const NUDGE = [[0, 0], [12, 0], [-12, 0], [0, 12], [0, -12], [10, 10], [-10, 10], [10, -10], [-10, -10], [24, 0], [-24, 0], [0, 24], [0, -24]];
 
 /** A plan at (hx, hy), or at a spot a few px away if that's what lets it close all round. */
-function nudgedOrb(web, hx, hy, r, pattern, range) {
+function nudgedOrb(web, hx, hy, r, pattern, range, reach = 0) {
   let first = null;
   for (const [dx, dy] of NUDGE) {
-    const plan = planOrb(web, hx + dx, hy + dy, r, pattern, range);
+    const plan = planOrb(web, hx + dx, hy + dy, r, pattern, range, reach);
     if (plan.ok) return plan;
     first ??= plan;
   }
@@ -279,9 +279,10 @@ export function fitOrb(web, hx, hy, r, pattern, range, silk) {
   let size = Number.isFinite(r) ? r : 95;
   let plan = nudgedOrb(web, hx, hy, size, pattern, range);
   if (!plan.ok) return plan;
+  const reach = Math.max(220, size * 2);
   while (plan.cost > silk && size > 52) {
     size *= 0.86;
-    const smaller = nudgedOrb(web, plan.hub.x, plan.hub.y, size, pattern, range);
+    const smaller = nudgedOrb(web, plan.hub.x, plan.hub.y, size, pattern, range, reach);
     if (!smaller.ok) break;
     plan = smaller;
   }
@@ -534,7 +535,7 @@ export function placeLure(world, sp) {
   if (mine.length >= max) world.lures.splice(world.lures.indexOf(mine[0]), 1);
   sp.silk -= 8;
   sp.regenDelay = 1;
-  world.lures.push({ id: world.nextId++, owner: sp.id, x: sp.x, y: sp.y + 10, t: 45, power: [1, 1.3, 1.45, 1.6][sp.mods.lure], flies: sp.mods.lure >= 3 });
+  world.lures.push({ id: world.nextId++, owner: sp.id, x: sp.x, y: sp.y + 10, t: 45, power: [1.3, 1.5, 1.65, 1.8][sp.mods.lure], flies: sp.mods.lure >= 3 });
   world.ev.push({ k: 'lure', id: sp.id, x: sp.x, y: sp.y });
   return true;
 }

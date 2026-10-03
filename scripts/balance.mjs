@@ -2,10 +2,10 @@
 //   npm run balance            (about two minutes)
 //   node scripts/balance.mjs quick | full | <section>
 import { createWorld, stepWorld } from '../game/js/sim/world.js';
-import { makeBot, botTick } from '../game/js/sim/bots.js';
+import { makeBot, botTick, buildFor } from '../game/js/sim/bots.js';
 import { planOrb } from '../game/js/sim/quickorb.js';
 import { spawnPrey } from '../game/js/sim/prey.js';
-import { UPGRADES, upgradeCost, PREY, SPECIES, GARDEN_KEYS, T_FRAME, T_RADIAL } from '../game/js/sim/data.js';
+import { PREY, SPECIES, GARDEN_KEYS, T_FRAME, T_RADIAL } from '../game/js/sim/data.js';
 import { lanePoint } from '../game/js/sim/garden.js';
 import { mix } from '../game/js/sim/rng.js';
 
@@ -15,33 +15,6 @@ const only = ['quick', 'full', 'all'].includes(arg) ? null : arg;
 const want = (name) => !only || only === name;
 const pct = (x) => `${Math.round(x * 100)}%`;
 const mean = (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0);
-
-const PRIORITY = {
-  novice: ['legs', 'glands', 'eyes', 'camo', 'shake', 'alarm'],
-  average: ['glands', 'droplets', 'strong', 'legs', 'eyes', 'camo', 'venom', 'shake'],
-  good: ['droplets', 'glands', 'strong', 'venom', 'camo', 'droplets', 'glands', 'eyes', 'legs', 'eggsac'],
-};
-const INCOME = { novice: 7, average: 11, good: 15 };
-
-/** Upgrades a spider of this skill would plausibly own by night n. */
-export function buildFor(skill, night, sp = 'orb') {
-  let points = Math.max(0, night - 1) * INCOME[skill];
-  const up = {};
-  const order = PRIORITY[skill];
-  for (let pass = 0; pass < 3; pass++) {
-    for (const id of order) {
-      if (!UPGRADES[id].for.includes(sp)) continue;
-      const tier = up[id] | 0;
-      if (tier > pass || tier >= 3) continue;
-      const c = upgradeCost(id, tier);
-      if (c <= points) {
-        points -= c;
-        up[id] = tier + 1;
-      }
-    }
-  }
-  return up;
-}
 
 function playNight({ seed, night, garden = 'cottage', sp = 'orb', skill = 'average', up, noWasps = false, mode = 'season' }) {
   const w = createWorld({ seed, night, garden, mode, players: [{ id: 'a', sp, up: up ?? buildFor(skill, night, sp) }] });
@@ -66,17 +39,21 @@ const t0 = Date.now();
 
 // ---------------------------------------------------------------- A. how often a night's quota is met
 if (want('quota')) {
-  const rows = [['night', 'novice', 'average', 'good', 'food/quota (avg)']];
+  const rows = [['night', 'quota', 'novice', 'average', 'good', 'food: novice / average / good (median)']];
   for (const night of [1, 3, 5, 7, 10]) {
     const row = [night];
-    let ratio = [];
+    const foods = [];
+    let quota = 0;
     for (const skill of ['novice', 'average', 'good']) {
       const res = [];
       for (let i = 0; i < SEEDS; i++) res.push(playNight({ seed: mix(9001 + i, night), night, garden: GARDEN_KEYS[i % 4], skill }));
+      quota = res[0].quota;
       row.push(pct(mean(res.map((r) => (r.met ? 1 : 0)))));
-      if (skill === 'average') ratio = res.map((r) => r.food / r.quota);
+      const f = res.map((r) => r.food).sort((a, b) => a - b);
+      foods.push(Math.round(f[Math.floor(f.length / 2)]));
     }
-    row.push(mean(ratio).toFixed(2));
+    row.splice(1, 0, quota);
+    row.push(foods.join(' / '));
     rows.push(row);
   }
   table('Quota met (targets: N1 novice >= 90%; N5 average >= 60%, novice <= 40%; N10 good 35-50%)', rows);
@@ -101,11 +78,28 @@ if (want('silk')) {
 }
 
 // ---------------------------------------------------------------- C. catches a web makes, well and badly placed
+function offLane(w) {
+  const p = {};
+  for (let y = 200; y < 820; y += 40) {
+    for (let x = 120; x < 1480; x += 40) {
+      const far = w.garden.lanes.every((l) => {
+        for (let u = 0; u <= 1; u += 0.02) {
+          lanePoint(l, u, p);
+          if (Math.hypot(p.x - x, p.y - y) < l.w + 140) return false;
+        }
+        return true;
+      });
+      if (far && planOrb(w.web, x, y, 95, 'orb', 520).ok) return { x, y, r: 95 };
+    }
+  }
+  return null;
+}
+
 function staticWeb(seed, good) {
   const w = createWorld({ seed, night: 3, garden: 'cottage', players: [{ id: 'a', sp: 'orb' }] });
   w.script.events = w.script.events.filter((e) => !['wasp', 'wren'].includes(e.k));
-  // Well placed: the best site on the main lane. Badly: a site on the least-used lane, away from the main one.
-  const site = good ? w.garden.sites.find((s) => s.lane === 0) : (w.garden.sites.find((s) => s.lane === 2) ?? null);
+  // Well placed: the best site on the main lane. Badly: somewhere an orb can hang that no lane passes near.
+  const site = good ? w.garden.sites.find((s) => s.lane === 0) : offLane(w);
   if (!site) return null;
   const sp = w.spiders[0];
   sp.silk = 300;
@@ -133,8 +127,8 @@ if (want('catch')) {
     const b = staticWeb(mix(777 + i, 1), false);
     if (b !== null) bad.push(b);
   }
-  table('Catches per minute on night 3, web left alone (targets: across the main lane 10-14; badly placed < 4; bad = the minor lane)', [
-    ['main lane', 'minor lane', 'samples'],
+  table('Catches per minute on night 3, web left alone (targets: across the main lane 10-14; badly placed < 4)', [
+    ['main lane', 'off the lanes', 'samples'],
     [mean(good).toFixed(1), bad.length ? mean(bad).toFixed(1) : 'n/a', `${good.length} / ${bad.length}`],
   ]);
 }
@@ -187,8 +181,8 @@ if (want('wasp')) {
   for (let i = 0; i < SEEDS; i++) {
     for (const night of [4, 6]) {
       const seed = mix(4242 + i, night);
-      const a = playNight({ seed, night, skill: 'novice', up: buildFor('average', night) });
-      const b = playNight({ seed, night, skill: 'novice', up: buildFor('average', night), noWasps: true });
+      const a = playNight({ seed, night, skill: 'unprotected', up: buildFor('average', night) });
+      const b = playNight({ seed, night, skill: 'unprotected', up: buildFor('average', night), noWasps: true });
       withW.push(a.food);
       without.push(b.food);
     }
