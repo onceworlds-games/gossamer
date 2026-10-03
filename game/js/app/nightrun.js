@@ -140,6 +140,25 @@ export class NightRun {
     }
   }
 
+  /** Which way the branch under the spider runs ('up', 'down', 'left' or 'right'): where its first step should be. */
+  heading() {
+    const me = this.me();
+    const web = this.world.web;
+    if (!me || !me.node) return 'right';
+    const n = web.ni(me.node);
+    if (n < 0) return 'right';
+    let best = null;
+    for (const t of web.adj[n]) {
+      const o = web.other(t, n);
+      const dx = web.x[o] - web.x[n];
+      const dy = web.y[o] - web.y[n];
+      const len = Math.hypot(dx, dy);
+      if (!best || len > best.len) best = { dx, dy, len };
+    }
+    if (!best) return 'right';
+    return Math.abs(best.dy) > Math.abs(best.dx) ? (best.dy < 0 ? 'up' : 'down') : best.dx > 0 ? 'right' : 'left';
+  }
+
   /** Spins the last Quick Orb again where it hung (the R key). */
   respin(me) {
     const o = this.lastOrb;

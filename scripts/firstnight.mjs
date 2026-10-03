@@ -37,7 +37,10 @@ try {
   await sleep(4500);
   await note('night begins');
   // 1. Walk.
-  for (const k of ['d', 'w', 'd']) await key(k, 700);
+  // The hint names the key for the way the branch runs; press that.
+  const way = await ev('__gossamer.run.heading()');
+  const walk = { up: 'w', down: 's', left: 'a', right: 'd' }[way] ?? 'd';
+  for (let i = 0; i < 3; i++) await key(walk, 800);
   await sleep(300);
   await note('after walking');
   // 2. A far twig: an anchor 160-360 px away, in range.

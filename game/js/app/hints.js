@@ -41,7 +41,12 @@ export class Hints {
     this.moved = 0;
     this.last = null;
     const me = run.me();
-    if (this.step) this.show('t-move', this.touch() ? 'Walk with the stick' : 'Walk the branch: WASD', 99, true);
+    if (this.step) {
+      // Say which way the branch runs: a stranger's first press should move the spider.
+      const way = run.heading();
+      const key = { up: 'W', down: 'S', left: 'A', right: 'D' }[way];
+      this.show('t-move', this.touch() ? `Push the stick ${way}` : `Walk the branch: ${key}`, 99, true);
+    }
     else if (me?.sp === 'orb') this.show('lanes', 'Build where it glows', 5);
     else if (me?.sp === 'jumper') this.show('jumper', 'Stalk, then pounce', 5);
     else if (me?.sp === 'bolas') this.show('bolas', 'Lure moths, swing the bolas', 5);
