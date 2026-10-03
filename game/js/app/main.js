@@ -15,7 +15,7 @@ async function boot() {
   await game.init();
   let last = performance.now();
   const frame = (now) => {
-    const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
+    const dt = Math.min(0.25, Math.max(0, (now - last) / 1000));
     last = now;
     try {
       game.frame(dt);

@@ -118,15 +118,11 @@ export function applyNight(season, tally, participants, salt = 0) {
   season.history.push({ n: season.night, food: Math.round(tally.food), quota: tally.quota, met, g: season.garden, rain: !!tally.rain, mist: !!tally.mist, swoops: tally.swoops, stolen: tally.stolen, mantis: !!tally.mantisOff, top: topCatch(tally) });
   if (season.history.length > 14) season.history.shift();
   season.score = seasonScore(season, tally.mantisOff);
-  if (season.mode === 'daily' || season.mode === 'tutorial') {
-    season.over = met || season.mode === 'daily' ? 'done' : 'lost';
-    out.over = season.over;
-    if (season.mode === 'tutorial' && met) {
-      // The first night was the tutorial: the season carries on from night two.
-      season.mode = 'season';
-      season.over = false;
-      out.over = false;
-    }
+  // The first night was the tutorial: the season carries on from night two either way.
+  if (season.mode === 'tutorial') season.mode = 'season';
+  if (season.mode === 'daily') {
+    season.over = 'done';
+    out.over = 'done';
   }
   if (!out.over) {
     if (season.lives <= 0) season.over = 'lost';

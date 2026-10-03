@@ -64,9 +64,9 @@ export class Game {
     this.hints = new Hints(this.profile, () => this.markDirty());
     this.reduced = platform.settings.reducedMotion;
     document.body.classList.toggle('reduced', this.reduced);
-    this.quality = platform.settings.quality;
+    this.quality = this.pickQuality();
     platform.settings.on(() => {
-      this.quality = platform.settings.quality;
+      this.quality = this.pickQuality();
       this.reduced = platform.settings.reducedMotion;
       document.body.classList.toggle('reduced', this.reduced);
       this.resize();
@@ -95,8 +95,34 @@ export class Game {
   resize() {
     const w = innerWidth;
     const h = innerHeight;
-    const pr = platform.settings.pixelRatio(2) * (this.quality === 'low' ? 0.8 : 1);
+    const pr = platform.settings.pixelRatio(2) * ({ low: 0.7, medium: 0.85, high: 1 }[this.quality] ?? 1);
     this.renderer.resize(w, h, pr);
+  }
+
+  /**
+   * Quality: a fixed choice in the platform menu is a ceiling; with Auto this page decides from its own frame times
+   * (down quickly when frames are slow, back up slowly when they're quick).
+   */
+  pickQuality() {
+    const choice = platform.settings.choice;
+    if (choice === 'low' || choice === 'medium' || choice === 'high') return choice;
+    return this.autoQ ?? 'high';
+  }
+
+  govern(dt) {
+    if (platform.settings.choice !== 'auto' && platform.settings.choice) return;
+    this.slowT = (this.slowT ?? 0) + (dt > 1 / 28 ? dt : -dt * 0.5);
+    this.quickT = dt < 1 / 50 ? (this.quickT ?? 0) + dt : 0;
+    const order = ['low', 'medium', 'high'];
+    let i = order.indexOf(this.quality);
+    if (this.slowT > 2 && i > 0) i--;
+    else if (this.quickT > 8 && i < 2) i++;
+    else return;
+    this.slowT = 0;
+    this.quickT = 0;
+    this.autoQ = order[i];
+    this.quality = order[i];
+    this.resize();
   }
 
   bindRoom() {
@@ -473,6 +499,7 @@ export class Game {
 
   frame(dt) {
     const t0 = performance.now();
+    this.govern(dt);
     this.frameWork(dt);
     // Smoothed cost of a frame (ms) and the frame rate, for the autopilot hook and adaptive effects.
     this.cost = (this.cost ?? 8) * 0.95 + (performance.now() - t0) * 0.05;

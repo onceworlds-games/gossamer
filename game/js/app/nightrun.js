@@ -157,12 +157,12 @@ export class NightRun {
 
   /** Advances the night by real time dt (clamped). Returns the number of sim ticks run. */
   update(dt, move) {
-    dt = Math.min(dt, 0.1);
+    dt = Math.min(dt, 0.25);
     this.t += dt;
     this.acc += dt;
     let ticks = 0;
     const me = this.me();
-    while (this.acc >= DT && ticks < 4) {
+    while (this.acc >= DT && ticks < 30) {
       this.acc -= DT;
       ticks++;
       const inp = { mx: move.mx, my: move.my, hurry: move.hurry, leap: this.pendingLeap ?? null };
@@ -174,7 +174,8 @@ export class NightRun {
         stepWorld(this.world, inputs);
       } else this.mirrorStep(inp);
     }
-    if (this.acc > DT * 4) this.acc = 0;
+    // Far behind (a stall, a hidden tab): let the time go rather than race to catch up.
+    if (this.acc > DT * 30) this.acc = 0;
     this.react();
     for (const p of this.pings) p.age += dt;
     this.pings = this.pings.filter((p) => p.age < 3);

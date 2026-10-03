@@ -367,15 +367,29 @@ export function drawMist(ctx, cam, pr, t, amount, q) {
 }
 
 /** Grain and vignette over the whole frame. */
+let vignette = null;
 export function drawFinish(ctx, cam, pr, t, q, dark = 0) {
   ctx.setTransform(pr, 0, 0, pr, 0, 0);
   const w = cam.sw;
   const h = cam.sh;
-  const v = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75);
-  v.addColorStop(0, 'rgba(0,0,0,0)');
-  v.addColorStop(1, `rgba(2, 8, 9, ${0.55 + dark * 0.3})`);
-  ctx.fillStyle = v;
-  ctx.fillRect(0, 0, w, h);
+  if (q !== 'low') {
+    // The vignette is drawn once per size and reused.
+    if (!vignette || vignette.w !== w || vignette.h !== h) {
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(w / 2));
+      c.height = Math.max(1, Math.round(h / 2));
+      const g = c.getContext('2d');
+      const v = g.createRadialGradient(c.width / 2, c.height / 2, Math.min(c.width, c.height) * 0.35, c.width / 2, c.height / 2, Math.max(c.width, c.height) * 0.75);
+      v.addColorStop(0, 'rgba(0,0,0,0)');
+      v.addColorStop(1, 'rgba(2, 8, 9, 0.6)');
+      g.fillStyle = v;
+      g.fillRect(0, 0, c.width, c.height);
+      vignette = { c, w, h };
+    }
+    ctx.globalAlpha = Math.min(1, 0.92 + dark * 0.3);
+    ctx.drawImage(vignette.c, 0, 0, w, h);
+    ctx.globalAlpha = 1;
+  }
   if (q === 'high') {
     sprites();
     ctx.globalAlpha = 0.045;

@@ -121,6 +121,7 @@ export class Coop {
     if (this.ckT <= 0) {
       this.ckT = CK_EVERY;
       this.checkpoint();
+      this.admitLate();
     }
   }
 

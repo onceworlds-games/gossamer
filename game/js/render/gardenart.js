@@ -78,22 +78,28 @@ export function drawGardenBack(ctx, world, art, t, q) {
     for (const l of world.lights) if (l.kind === 'lamp' && q !== 'low') glow(ctx, l.x, l.y, 260, AMBER, 0.2);
   }
   for (const m of art.masses) {
-    ctx.save();
-    ctx.translate(4, 6);
-    ctx.fillStyle = 'rgba(2, 8, 9, 0.4)';
-    ctx.fill(m.p);
-    ctx.restore();
-    ctx.save();
-    ctx.translate(0, -2);
-    ctx.fillStyle = 'rgba(120, 170, 160, 0.22)';
-    ctx.fill(m.p);
-    ctx.restore();
+    if (q !== 'low') {
+      ctx.save();
+      ctx.translate(4, 6);
+      ctx.fillStyle = 'rgba(2, 8, 9, 0.4)';
+      ctx.fill(m.p);
+      ctx.restore();
+      ctx.save();
+      ctx.translate(0, -2);
+      ctx.fillStyle = 'rgba(120, 170, 160, 0.22)';
+      ctx.fill(m.p);
+      ctx.restore();
+    }
     ctx.fillStyle = '#0d2624';
     ctx.fill(m.p);
   }
-  for (const f of art.flecks) {
+  if (q !== 'low') {
     ctx.fillStyle = 'rgba(64, 118, 106, 0.42)';
-    leafShape(ctx, f.x, f.y, f.a, 6.5 * f.s, true);
+    const step = q === 'high' ? 1 : 2;
+    for (let i = 0; i < art.flecks.length; i += step) {
+      const f = art.flecks[i];
+      leafShape(ctx, f.x, f.y, f.a, 6.5 * f.s, true);
+    }
   }
   // Gravestone slabs.
   for (const d of g.decor) {
