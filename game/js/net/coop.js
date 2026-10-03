@@ -149,12 +149,17 @@ export class Coop {
     return out;
   }
 
+  /** Four values, each under the 16 KB limit: the night, the knots, the threads, the living. */
   checkpoint() {
     const run = this.run;
     if (!run) return;
     const ck = packWorld(run.world);
     this.k++;
-    this.room.setState('ck', { mid: this.mid, k: this.k, meta: ck.meta, n: ck.n, t: ck.t });
+    const { prey, swarms, wasps, ...meta } = ck.meta;
+    this.room.setState('ck', { mid: this.mid, k: this.k, meta });
+    this.room.setState('ckn', { mid: this.mid, k: this.k, n: ck.n });
+    this.room.setState('ckt', { mid: this.mid, k: this.k, t: ck.t });
+    this.room.setState('ckp', { mid: this.mid, k: this.k, prey, swarms, wasps });
   }
 
   // ---------------------------------------------------------------- messages

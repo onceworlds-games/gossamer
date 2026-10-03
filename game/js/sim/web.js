@@ -639,7 +639,7 @@ export class Web {
       }
     }
     const threads = t.u16();
-    for (let k = 0; k < threads && t.left >= 16; k++) {
+    for (let k = 0; k < threads && t.left >= 15; k++) {
       const id = t.u16();
       const a = t.u16();
       const b = t.u16();

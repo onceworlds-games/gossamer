@@ -219,25 +219,31 @@ function reed(b) {
 function greenhouse(b) {
   const r = b.rng;
   const g = ground(b, GROUND, 2);
-  // The frame: glass walls and a pitched roof (glass is solid to prey: moths bat against it).
+  // The frame: glass walls and a pitched roof (glass is solid to prey: moths bat against it). Each wall has an open
+  // vent where the night comes in.
   const wl = range(r, 70, 110);
   const wr = W - range(r, 70, 110);
   const eave = range(r, 330, 380);
   const ridge = range(r, 70, 110);
+  const yL = range(r, 430, 500);
+  const yR = range(r, 520, 600);
   const gl = b.point(g, b.nearest(g, wl));
   const gr = b.point(g, b.nearest(g, wr));
-  const left = b.surface(line(gl[0], gl[1], wl, eave, 90), { kind: 'glass', root: [g, b.nearest(g, wl)], solid: true, w0: 5, w1: 5 });
-  const right = b.surface(line(gr[0], gr[1], wr, eave, 90), { kind: 'glass', root: [g, b.nearest(g, wr)], solid: true, w0: 5, w1: 5 });
-  const roofL = b.surface(line(wl, eave, (wl + wr) / 2, ridge, 64), { kind: 'glass', root: [left, b.last(left)], solid: true, w0: 5, w1: 5 });
+  b.surface(line(gl[0], gl[1], wl, yL + 44, 90), { kind: 'glass', root: [g, b.nearest(g, wl)], solid: true, w0: 5, w1: 5 });
+  b.surface(line(gr[0], gr[1], wr, yR + 44, 90), { kind: 'glass', root: [g, b.nearest(g, wr)], solid: true, w0: 5, w1: 5 });
+  const leftUp = b.surface(line(wl, yL - 44, wl, eave, 90), { kind: 'glass', solid: true, w0: 5, w1: 5 });
+  const rightUp = b.surface(line(wr, yR - 44, wr, eave, 90), { kind: 'glass', solid: true, w0: 5, w1: 5 });
+  const roofL = b.surface(line(wl, eave, (wl + wr) / 2, ridge, 64), { kind: 'glass', root: [leftUp, b.last(leftUp)], solid: true, w0: 5, w1: 5 });
   const roofPts = line(wr, eave, (wl + wr) / 2, ridge, 64);
   roofPts[roofPts.length - 1] = b.point(roofL, b.last(roofL)).slice();
-  const roofR = b.surface(roofPts, { kind: 'glass', root: [right, b.last(right)], solid: true, w0: 5, w1: 5 });
-  // Glazing bars: stiff vertical struts from roof to bench height.
+  const roofR = b.surface(roofPts, { kind: 'glass', root: [rightUp, b.last(rightUp)], solid: true, w0: 5, w1: 5 });
+  // Glazing bars: stiff struts from the floor up to a roof joint (that is what holds the roof up).
   for (let k = 1; k <= 3; k++) {
     const x = wl + ((wr - wl) * k) / 4;
     const gi = b.nearest(g, x);
-    const top = ridge + ((eave - ridge) * Math.abs(x - (wl + wr) / 2)) / ((wr - wl) / 2);
-    b.surface([b.point(g, gi).slice(), [x, top + 4]], { kind: 'bar', root: [g, gi], w0: 4, w1: 4 });
+    const roof = x < (wl + wr) / 2 ? roofL : roofR;
+    const top = b.point(roof, b.nearest(roof, x));
+    b.surface([b.point(g, gi).slice(), [top[0], (top[1] + GROUND) / 2], top.slice()], { kind: 'bar', root: [g, gi], w0: 4, w1: 4 });
   }
   // The staging bench and pots of tomatoes on stakes.
   const bench = range(r, 690, 740);
@@ -267,9 +273,10 @@ function greenhouse(b) {
   b.cover.push({ x: 160, y: GROUND - 50, rx: 120, ry: 70 });
   b.retreat = { si: legA, pi: 1 };
   b.start = { si: benchS, pi: 0 };
-  lane(b, [[wl + 10, range(r, 420, 500)], [700, range(r, 380, 460)], [1100, range(r, 420, 520)], [wr - 10, range(r, 400, 480)]], 80, 0.55);
-  lane(b, [[wr - 10, range(r, 560, 640)], [800, range(r, 560, 620)], [wl + 10, range(r, 560, 640)]], 70, 0.3);
-  lane(b, [[(wl + wr) / 2 + range(r, -200, 200), ridge + 30], [range(r, 500, 1100), 650], [range(r, 300, 1300), ridge + 60]], 60, 0.15);
+  // Every lane comes in and goes out through a vent.
+  lane(b, [[-60, yL], [wl + 40, yL], [700, range(r, 380, 460)], [1100, range(r, 420, 520)], [wr - 40, yR], [W + 60, yR]], 70, 0.55);
+  lane(b, [[W + 60, yR], [wr - 40, yR], [800, range(r, 560, 620)], [wl + 40, yL], [-60, yL]], 60, 0.3);
+  lane(b, [[-60, yL], [wl + 40, yL], [range(r, 400, 700), range(r, 260, 340)], [range(r, 800, 1200), range(r, 280, 360)], [wr - 40, yR], [W + 60, yR]], 50, 0.15);
 }
 
 function churchyard(b) {

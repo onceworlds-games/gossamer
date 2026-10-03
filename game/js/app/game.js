@@ -333,8 +333,7 @@ export class Game {
     const cfg = this.nightConfig(s, players);
     const rec = { mid: m.id, cfg, by: this.me, at: 0 };
     this.room.setState('night', rec);
-    this.room.setState('ck', null);
-    this.room.setState('result', null);
+    for (const k of ['ck', 'ckn', 'ckt', 'ckp', 'result']) this.room.setState(k, null);
     this.run = new NightRun(cfg, { role: 'host', myId: m.participants?.includes(this.me) || !m.participants ? this.me : null, renderer: this.renderer, audio: this.audio, onEvent: (e) => this.onNightEvent(e) });
     this.net.startHosting(this.run);
     this.audio.night(this.run.world);
@@ -351,10 +350,10 @@ export class Game {
 
   /** Taking over a night that is already under way (a reload, or the host role moved to us). */
   adopt(rec) {
-    const ck = this.room.state?.ck;
+    const ck = this.checkpointOf(rec.mid);
     const myId = this.room.match.participants?.includes(this.me) ? this.me : null;
     this.run = new NightRun(rec.cfg, { role: 'host', myId, renderer: this.renderer, audio: this.audio, onEvent: (e) => this.onNightEvent(e) });
-    if (ck && ck.mid === rec.mid) unpackWorld(this.run.world, ck, this.net.poses());
+    if (ck) unpackWorld(this.run.world, ck, this.net.poses());
     this.room.setState('night', { ...rec, by: this.me });
     this.net.startHosting(this.run);
     this.audio.night(this.run.world);
@@ -364,10 +363,21 @@ export class Game {
   mirror(rec) {
     const myId = this.room.match.participants?.includes(this.me) && !this.room.spectating ? this.me : null;
     this.run = new NightRun(rec.cfg, { role: 'mirror', myId, renderer: this.renderer, audio: this.audio, send: (c) => this.net.command(c), onEvent: (e) => this.onNightEvent(e) });
-    const ck = this.room.state?.ck;
-    if (ck && ck.mid === rec.mid) unpackWorld(this.run.world, ck, null, myId);
+    const ck = this.checkpointOf(rec.mid);
+    if (ck) unpackWorld(this.run.world, ck, null, myId);
     this.net.startMirror(this.run);
     this.audio.night(this.run.world);
+  }
+
+  /** The latest checkpoint for this night, put back together from its three room-state values. */
+  checkpointOf(mid) {
+    const st = this.room.state ?? {};
+    const a = st.ck;
+    const n = st.ckn;
+    const t = st.ckt;
+    const p = st.ckp;
+    if (!a || a.mid !== mid || !a.meta) return null;
+    return { meta: { ...a.meta, prey: p?.mid === mid ? p.prey : [], swarms: p?.mid === mid ? p.swarms : [], wasps: p?.mid === mid ? p.wasps : [] }, n: n?.mid === mid ? n.n : '', t: t?.mid === mid ? t.t : '' };
   }
 
   onNightEvent(e) {
@@ -410,7 +420,7 @@ export class Game {
     const result = { mid: this.room.match.id, t, out, season: { night: s.night, lives: s.lives, over: s.over, score: s.score, mode: s.mode } };
     this.room.setState('result', result);
     this.writeSeason(s);
-    this.room.setState('ck', null);
+    for (const k of ['ck', 'ckn', 'ckt', 'ckp']) this.room.setState(k, null);
     this.room.endMatch();
   }
 
