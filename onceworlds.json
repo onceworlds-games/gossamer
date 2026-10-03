@@ -21,7 +21,6 @@
     { "keys": ["Shift"], "action": "Hurry" },
     { "keys": ["Tab", "Wheel"], "action": "Ping a spot, zoom" }
   ],
-  "help": "Spin a web where the prey fly (the notebook's forecast tells you the night), then feel for what lands. Sticky silk catches, dry silk is strong. Wrap a catch before it tears free and eat it before dawn: meet the quota or lose an egg sac. Hide from the wren's shadow and from wasps in the leaves. Spend moult on upgrades between nights. Ten nights make a season.",
   "badges": [
     { "id": "first-catch", "name": "First Catch", "description": "Eat your first catch.", "icon": "store/badges/first-catch.png" },
     { "id": "orb-complete", "name": "Orb Complete", "description": "Close a spiral all the way round.", "icon": "store/badges/orb-complete.png" },
