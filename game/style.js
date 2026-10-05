@@ -96,14 +96,19 @@ export function ellipse(ctx, x, y, rx, ry, fill, lw = 0, stroke = INK) {
   }
 }
 
-/** A colour from "#rrggbb" made lighter (amt > 0) or darker (amt < 0). */
+const shades = new Map();
+
+/** A colour from "#rrggbb" made lighter (amt > 0) or darker (amt < 0). Remembered, so drawing it every frame makes no garbage. */
 export function shade(hex, amt) {
-  const n = parseInt(hex.slice(1), 16);
-  const f = (v) => Math.max(0, Math.min(255, Math.round(amt >= 0 ? v + (255 - v) * amt : v * (1 + amt))));
-  const r = f((n >> 16) & 255);
-  const g = f((n >> 8) & 255);
-  const b = f(n & 255);
-  return `rgb(${r},${g},${b})`;
+  const key = `${hex}|${amt}`;
+  let out = shades.get(key);
+  if (out === undefined) {
+    const n = parseInt(hex.slice(1), 16);
+    const f = (v) => Math.max(0, Math.min(255, Math.round(amt >= 0 ? v + (255 - v) * amt : v * (1 + amt))));
+    out = `rgb(${f((n >> 16) & 255)},${f((n >> 8) & 255)},${f(n & 255)})`;
+    shades.set(key, out);
+  }
+  return out;
 }
 
 export function star(ctx, x, y, r, points = 5, inner = 0.5, rot = -Math.PI / 2) {

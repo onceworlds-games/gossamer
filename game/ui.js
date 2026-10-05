@@ -191,7 +191,7 @@ function pill(ctx, x, y, w, h, fill) {
 // ---------------------------------------------------------------- title
 
 /** The logo and the one PLAY button. `press` is 0..1 while the button is held down. */
-export function drawTitle(ctx, W, H, t, press, touch) {
+export function drawTitle(ctx, W, H, t, press, touch, calm = false) {
   const ui = uiScale(W, H);
   ctx.fillStyle = 'rgba(20,12,40,0.28)';
   ctx.fillRect(0, 0, W, H);
@@ -213,7 +213,7 @@ export function drawTitle(ctx, W, H, t, press, touch) {
     for (let i = 0; i < text.length; i++) {
       const ch = text[i];
       const cw = ctx.measureText(ch).width;
-      const wave = Math.sin(t * 3.2 + i * 0.5 + li) * px * 0.04;
+      const wave = calm ? 0 : Math.sin(t * 3.2 + i * 0.5 + li) * px * 0.04;
       // a solid shadow, then the outlined letter
       outlined(ctx, ch, x + cw / 2 + px * 0.04, y + px * 0.06 + wave, px, 'rgba(30,20,50,0.4)', 'rgba(30,20,50,0.4)', 'center', 'middle', px * 0.22);
       outlined(ctx, ch, x + cw / 2, y + wave, px, fill, INK, 'center', 'middle', px * 0.2);
@@ -226,7 +226,7 @@ export function drawTitle(ctx, W, H, t, press, touch) {
   const bh = clamp(H * 0.2, 66, 100);
   const bx = W / 2 - bw / 2;
   const by = top + lineH * 2 + 26 * ui;
-  const pulse = 1 + 0.035 * Math.sin(t * 4) - press * 0.06;
+  const pulse = 1 + (calm ? 0 : 0.035 * Math.sin(t * 4)) - press * 0.06;
   ctx.save();
   ctx.translate(W / 2, by + bh / 2);
   ctx.scale(pulse, pulse);
@@ -344,7 +344,7 @@ export function drawBanner(ctx, W, H, age, dur, round, rounds, mode) {
   const outT = clamp((age - (dur - 0.25)) / 0.25, 0, 1);
   const slide = (1 - easeOutBack(inT)) * -H * 0.5 + outT * -H * 0.5;
   const bh = 92 * ui;
-  const y = H * 0.3 - bh / 2 + slide;
+  const y = H * 0.38 - bh / 2 + slide;
   ctx.fillStyle = 'rgba(30,20,50,0.4)';
   ctx.fillRect(0, y + 8, W, bh);
   ctx.fillStyle = '#fff8e8';
@@ -541,6 +541,17 @@ export function drawWatching(ctx, W, H) {
   ellipse(ctx, ex, ey, 11 * ui, 7 * ui, '#ffffff', 2.5, INK);
   circle(ctx, ex, ey, 3.8 * ui, INK);
   outlined(ctx, 'Watching', W / 2 + 12 * ui, ey, 17 * ui, INK, 'rgba(255,255,255,0)', 'center', 'middle', 0);
+}
+
+/** A caught player in Out mode: a ghost, and a label so it's clear why nothing happens. */
+export function drawOut(ctx, W, H) {
+  const ui = uiScale(W, H);
+  const w = 110 * ui;
+  const h = 40 * ui;
+  const y = H - 60 * ui;
+  pill(ctx, W / 2 - w / 2, y, w, h, '#fff8e8');
+  ghostIcon(ctx, W / 2 - w / 2 + 26 * ui, y + h / 2, 30 * ui);
+  outlined(ctx, 'OUT', W / 2 + 16 * ui, y + h / 2, 24 * ui, INK, 'rgba(255,255,255,0)', 'center', 'middle', 0);
 }
 
 /** The first seconds of a round, for keyboards: a key cap to hold. */

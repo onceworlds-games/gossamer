@@ -168,7 +168,7 @@ export function createNet(ow, room) {
   let botRid = null;
   let botT = 0;
   let lastPub = 0;
-  let endedFor = null;
+  let endTry = -Infinity;
   let sched = { rs: null, s: null };
   let checked = null;
   let checkedOk = false;
@@ -271,8 +271,8 @@ export function createNet(ow, room) {
       if (isRoundOver(g, now, activeIds(g))) commit(g, closeRound(g, now, distances(g)));
     } else if (g.phase === 'board') {
       if (now >= g.until) commit(g, advance(g, now));
-    } else if (g.phase === 'final' && now >= g.until && endedFor !== g.mid) {
-      endedFor = g.mid;
+    } else if (g.phase === 'final' && now >= g.until && now - endTry >= 3000) {
+      endTry = now; // asked once; asked again after a few seconds only if the room is still playing (the call can fail)
       room.endMatch(); // back to the platform's lobby
     }
   }, 100);
@@ -396,6 +396,7 @@ export function createNet(ow, room) {
   room.on('reconnect', adopt);
   room.on('matchend', () => {
     botRid = null;
+    endTry = -Infinity;
     snaps.length = 0;
   });
   adopt();

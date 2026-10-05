@@ -753,6 +753,35 @@ export function drawTags(ctx, v, chars, n, t, o = {}) {
   }
 }
 
+/** Three chevrons pulsing up the lane ahead of a character that hasn't started: the way is up the field. */
+export function drawGuide(ctx, v, x, y, t) {
+  const S = v.S;
+  const px = worldX(v, x);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let i = 0; i < 3; i++) {
+    const phase = (t * 1.6 - i * 0.28) % 1.6;
+    const a = Math.max(0, 1 - Math.abs(phase - 0.5) * 1.6);
+    if (a <= 0) continue;
+    const cy = worldY(v, y + 2.2 + i * 1.1);
+    ctx.globalAlpha = a * 0.9;
+    for (const [col, lw] of [
+      [INK, 0.34 * S],
+      ['#ffffff', 0.2 * S],
+    ]) {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = Math.max(3, lw);
+      ctx.beginPath();
+      ctx.moveTo(px - 0.55 * S, cy + 0.25 * S);
+      ctx.lineTo(px, cy - 0.25 * S);
+      ctx.lineTo(px + 0.55 * S, cy + 0.25 * S);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.lineCap = 'butt';
+}
+
 // ---------------------------------------------------------------- the whole scene
 
 /**

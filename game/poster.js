@@ -132,7 +132,7 @@ function cover(ctx, w, h) {
   fx.update(0.1);
   drawScene(ctx, v, scene(RED_LIGHT, -0.172, -1, chars));
   drawLightFrame(ctx, w, h, 2, 0, true);
-  titleText(ctx, w, 78, 96);
+  titleText(ctx, w, 78, 88);
 }
 
 function action(ctx, w, h) {
@@ -277,16 +277,5 @@ function badgeArt(ctx, w, h, kind) {
     ctx.lineTo(cx - 28, cy + 24);
     ctx.lineWidth = 7;
     ctx.stroke();
-    for (const [x, y] of [
-      [-112, 14],
-      [-122, 34],
-    ]) {
-      ctx.beginPath();
-      ctx.moveTo(cx + x, cy + y);
-      ctx.lineTo(cx + x - 30, cy + y);
-      ctx.lineWidth = 8;
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      ctx.stroke();
-    }
   }
 }

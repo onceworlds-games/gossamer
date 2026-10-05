@@ -6,7 +6,7 @@
 
 import * as audio from './audio.js';
 import { Demo } from './demo.js';
-import { animChar, bump, clampCam, drawScene, getAvatar, makeVis, makeView, setAvatarSource } from './draw.js';
+import { animChar, bump, clampCam, drawGuide, drawScene, getAvatar, makeVis, makeView, setAvatarSource } from './draw.js';
 import { photoFinish } from './flow.js';
 import { fx } from './fx.js';
 import { createInput } from './input.js';
@@ -59,7 +59,7 @@ function runSession(ow, room, withTitle) {
   const resize = () => {
     W = Math.max(1, window.innerWidth);
     H = Math.max(1, window.innerHeight);
-    pr = ow.settings?.pixelRatio?.(2) ?? Math.min(window.devicePixelRatio || 1, 2);
+    pr = ow.settings.pixelRatio(2) || 1;
     canvas.width = Math.round(W * pr);
     canvas.height = Math.round(H * pr);
     canvas.style.width = `${W}px`;
@@ -139,6 +139,8 @@ function runSession(ow, room, withTitle) {
   let lastPresence = '';
   let lastPresenceAt = 0;
   let reported = new Set();
+  let preview = { id: null, value: null };
+  let lastRecord = null;
 
   Promise.resolve()
     .then(() => ow.save.get('stats'))
@@ -440,6 +442,12 @@ function runSession(ow, room, withTitle) {
     return sy > -view.S && sy < H + view.S;
   };
 
+  /** What the match will be, from what every page already knows (kept, since it's asked for every frame of the countdown). */
+  function previewFor(match) {
+    if (preview.id !== match.id) preview = { id: match.id, value: previewOf(match) };
+    return preview.value;
+  }
+
   // ------------------------------------------------ this page's own character
   function addMe(n, g, nowMs) {
     const e = entry(n, meId);
@@ -616,7 +624,7 @@ function runSession(ow, room, withTitle) {
       audio.setMood('menu');
     } else if (to === 'countdown' || to === 'wait') {
       if (from !== 'countdown' && from !== 'wait') {
-        placeAtSlot(previewOf(room.match));
+        placeAtSlot(previewFor(room.match));
         lastCountN = 0;
         fx.clear();
         results = null;
@@ -768,7 +776,7 @@ function runSession(ow, room, withTitle) {
 
     // the record
     let pv = g;
-    if (!g && (mode === 'countdown' || mode === 'wait')) pv = previewOf(room.match);
+    if (!g && (mode === 'countdown' || mode === 'wait')) pv = previewFor(room.match);
     if (attract() || mode === 'lobby') pv = null;
     if (g) {
       roster = g.roster;
@@ -782,7 +790,10 @@ function runSession(ow, room, withTitle) {
           fx.clear();
         }
       }
-      onRecord(g);
+      if (g !== lastRecord) {
+        lastRecord = g; // the host's record only changes when it writes
+        onRecord(g);
+      }
     } else if (pv) {
       roster = pv.roster;
       botsMap = pv.bots;
@@ -899,14 +910,24 @@ function runSession(ow, room, withTitle) {
     ctx.translate(o.x, o.y);
     drawScene(ctx, view, sc);
     ctx.restore();
+    if (mode === 'round' && g && !ranYet && !room.spectating && me.s === S_RUN && nowMs < g.t0 + 15000 && g.n === 1) drawGuide(ctx, view, me.x, me.y, clock);
     fx.drawFlash(ctx, W, H);
 
     const t = clock;
     const calm = reduced();
+    // GO! at the very start of a match, on the match clock, even in the moment before the host's record arrives
+    if ((mode === 'wait' || mode === 'round') && room.running && nowMs < GO_MS && (!g || g.n === 1)) {
+      if (goPlayed !== room.match.id) {
+        goPlayed = room.match.id;
+        audio.sfx.go();
+        fx.shake(0.1);
+      }
+      ui.drawGo(ctx, W, H, nowMs / 1000);
+    }
     switch (mode) {
       case 'title': {
         playPress = Math.max(0, playPress - dt * 6);
-        ui.drawTitle(ctx, W, H, t, playPress, touch());
+        ui.drawTitle(ctx, W, H, t, playPress, touch(), calm);
         break;
       }
       case 'closed': {
@@ -945,15 +966,6 @@ function runSession(ow, room, withTitle) {
       }
       case 'round': {
         if (!g) break;
-        const sinceAt = nowMs - g.at;
-        if (g.n === 1 && sinceAt >= 0 && sinceAt < GO_MS) {
-          if (goPlayed !== g.rid) {
-            goPlayed = g.rid;
-            audio.sfx.go();
-            fx.shake(0.1);
-          }
-          ui.drawGo(ctx, W, H, sinceAt / 1000);
-        }
         if (nowMs >= g.t0 - BANNER_MS && nowMs < g.t0) {
           if (bannerPlayed !== g.rid) {
             bannerPlayed = g.rid;
@@ -974,6 +986,7 @@ function runSession(ow, room, withTitle) {
         }
         if (!touch() && g.n === 1 && !ranYet && running && nowMs < g.t0 + 8000 && !room.spectating) ui.drawKeyHint(ctx, W, H, t);
         if (room.spectating) ui.drawWatching(ctx, W, H);
+        else if (me.s === S_GHOST) ui.drawOut(ctx, W, H);
         break;
       }
       case 'board': {

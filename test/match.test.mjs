@@ -87,7 +87,7 @@ test('a bot-only match ends, ranks everyone and keeps the field sane (20 seeds, 
     }
   }
   const mean = durations.reduce((a, b) => a + b, 0) / durations.length;
-  console.log(`      rounds ${rounds}, mean round ${mean.toFixed(1)} s, finishers per round ${(finishers / rounds).toFixed(1)}/8, caught per red per bot ${(caught / (reds / 1) / 8).toFixed(2)}`);
+  console.log(`      ${rounds} rounds, mean ${mean.toFixed(1)} s, ${(finishers / rounds).toFixed(1)} of 8 finish, ${(caught / rounds).toFixed(1)} catches a round (${reds} reds)`);
   assert.ok(mean > 12 && mean < 70, `mean round length ${mean}`);
 });
 

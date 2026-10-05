@@ -56,4 +56,5 @@ test('title, lobby, countdown, three rounds, podium and back, without a single b
   assert.ok(lastFrame.includes('Enter: start') && lastFrame.includes('ROUNDS'), 'back in the lobby arena after the match');
   assert.equal(h.st.audioErrors.length, 0, `audio errors: ${h.st.audioErrors.join(', ')}`);
   assert.ok(h.st.drawCalls > 100000);
+  assert.ok(h.st.audioCalls > 1000, 'the music and the sounds played');
 });
