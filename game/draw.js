@@ -717,7 +717,7 @@ export function drawTags(ctx, v, chars, n, t, o = {}) {
     let top = py - 1.95 * S;
     if (ch.ready) {
       const wob = Math.sin(t * 6 + i) * 0.06 * S;
-      const h = Math.max(22, 0.6 * S);
+      const h = Math.max(28, 0.9 * S);
       const w = h * 3.1;
       plate(ctx, px - w / 2, top - h + wob, w, h, h / 2, GREEN, Math.max(2.5, 0.07 * S), 0);
       outlined(ctx, 'READY', px + h * 0.28, top - h / 2 + wob, h * 0.58, '#ffffff', INK, 'center', 'middle', Math.max(2.5, h * 0.12));

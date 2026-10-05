@@ -260,7 +260,7 @@ export function drawLobbyTop(ctx, W, H, t, st) {
   const ch = 58 * ui;
   const gap = 12 * ui;
   const x0 = W / 2 - cw - gap / 2;
-  const y0 = 64 * ui;
+  const y0 = Math.max(64 * ui, 60);
   const chips = [
     { id: 'set-rounds', label: 'ROUNDS', value: String(st.rounds), icon: flagIcon },
     { id: 'set-mode', label: 'CAUGHT', value: MODE_LABEL[st.mode] ?? 'Back to start', icon: st.mode === 'out' ? ghostIcon : backIcon },
