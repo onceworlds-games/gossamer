@@ -1,0 +1,8 @@
+{
+  "name": "red-light-green-light",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  }
+}
