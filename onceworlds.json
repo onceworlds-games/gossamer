@@ -1,0 +1,20 @@
+{
+  "slug": "red-light-green-light",
+  "name": "Red Light Green Light",
+  "description": "Run on green, freeze on red! Get caught moving and it's back to the start.",
+  "dir": "game",
+  "genre": "Party",
+  "icon": "store/icon.png",
+  "thumbnails": ["store/thumb-1.png", "store/thumb-2.png", "store/thumb-3.png"],
+  "badges": [
+    { "id": "first-win", "name": "First Win", "description": "Win a match.", "icon": "store/badge-first-win.png" },
+    { "id": "statue", "name": "Statue", "description": "Finish a round without being caught.", "icon": "store/badge-statue.png" },
+    { "id": "photo-finish", "name": "Photo Finish", "description": "Win a round by less than half a second.", "icon": "store/badge-photo-finish.png" },
+    { "id": "marathon", "name": "Marathon", "description": "Play 10 matches.", "icon": "store/badge-marathon.png" }
+  ],
+  "controls": [
+    { "keys": ["Space", "W"], "action": "Hold to run" },
+    { "keys": ["A", "D"], "action": "Steer" },
+    { "keys": ["Left", "Right"], "action": "Steer" }
+  ]
+}
