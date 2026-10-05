@@ -397,7 +397,7 @@ export function drawLightFrame(ctx, W, H, c, t, calm) {
   const pulse = calm ? 0.5 : 0.5 + 0.5 * Math.sin(t * (c === 2 ? 5 : 16));
   const lw = (c === 2 ? 16 : 12) * ui;
   ctx.save();
-  ctx.globalAlpha = 0.25 + 0.3 * pulse;
+  ctx.globalAlpha = 0.6 + 0.3 * pulse; // strong enough to read red over the grass, not brown
   ctx.strokeStyle = c === 2 ? RED : YELLOW;
   ctx.lineWidth = lw;
   ctx.strokeRect(lw / 2, lw / 2, W - lw, H - lw);

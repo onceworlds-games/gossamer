@@ -7,7 +7,7 @@ import { fx } from './fx.js';
 import { FIELD_W, PLAYER_COLORS, hashStr, mulberry32 } from './rules.js';
 import { S_DONE, S_RUN, S_ZAP } from './sim.js';
 import { FONT, GREEN, INK, RED, YELLOW, circle, outlined, plate, rr, star } from './style.js';
-import { crown, drawLightFrame } from './ui.js';
+import { crown } from './ui.js';
 
 const SIZES = { cover: [1280, 720], action: [1280, 720], win: [1280, 720], icon: [512, 512] };
 const BADGES = ['first-win', 'statue', 'photo-finish', 'marathon'];
@@ -131,13 +131,12 @@ function cover(ctx, w, h) {
   for (let i = 0; i < 3; i++) fx.dust(10.5, 58.1, 4, 0.8);
   fx.update(0.1);
   drawScene(ctx, v, scene(RED_LIGHT, -0.172, -1, chars));
-  drawLightFrame(ctx, w, h, 2, 0, true);
   titleText(ctx, w, 78, 88);
 }
 
 function action(ctx, w, h) {
-  const S = 70;
-  const v = { W: w, H: h, S, ox: w / 2 - (FIELD_W / 2) * S, base: 576, camY: 20.5 };
+  const S = 140;
+  const v = { W: w, H: h, S, ox: w / 2 - (FIELD_W / 2) * S, base: 430, camY: 20.5 };
   const hero = actor('bot3', 6.7, 19.6, { vy: 3.4, ph: 1.2, c: 3, skid: 1, q: 0.1, mood: 'scared', vx: 0.4 });
   const chars = [hero, actor('bot6', 3.7, 21.7, { c: 7, mood: 'scared' }), actor('bot1', 9.3, 21.2, { c: 1, mood: 'scared' })];
   for (let i = 0; i < 5; i++) fx.dust(hero.x + (i % 2 ? 0.4 : -0.2), hero.y, 5, 1.2);
@@ -145,7 +144,6 @@ function action(ctx, w, h) {
   for (let i = 0; i < 3; i++) fx.dust(hero.x - 0.3, hero.y + 0.05, 5, 1.4);
   fx.update(0.1);
   drawScene(ctx, v, scene({ c: 2, k: 2, tIn: 0.3, left: 2, fake: -1, turn: 1, wait: false }, -0.9, -1, chars));
-  drawLightFrame(ctx, w, h, 2, 0, true);
   // the Watcher far up the field, turned around: the lamp is red
   drawWatcher(ctx, w / 2, 92, 26, RED_LIGHT, 0);
 }
